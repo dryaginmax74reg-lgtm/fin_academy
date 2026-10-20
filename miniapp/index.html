@@ -17,7 +17,9 @@
       --muted: #9aabba;
       --accent: #64d6ae;
     }
+
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       background: var(--bg);
@@ -25,25 +27,36 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       line-height: 1.55;
     }
+
     header {
       padding: 24px 18px 18px;
       border-bottom: 1px solid var(--border);
     }
+
     .brand {
       color: var(--accent);
       font-size: 12px;
       font-weight: 800;
       letter-spacing: 2px;
     }
+
     h1 { font-size: 26px; margin: 8px 0; }
     h2 { font-size: 20px; margin-top: 0; }
+    h3 { font-size: 16px; margin-bottom: 6px; }
     .muted { color: var(--muted); }
-    main { max-width: 760px; margin: auto; padding: 18px; }
+
+    main {
+      max-width: 760px;
+      margin: auto;
+      padding: 18px;
+    }
+
     nav {
       display: flex;
       gap: 8px;
       margin-bottom: 20px;
     }
+
     button {
       border: 1px solid var(--border);
       border-radius: 12px;
@@ -53,12 +66,20 @@
       cursor: pointer;
       font-size: 14px;
     }
-    button.active, button.primary {
+
+    button:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
+
+    button.active,
+    button.primary {
       background: var(--accent);
       color: #10231d;
       border-color: var(--accent);
       font-weight: 700;
     }
+
     .card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -67,16 +88,29 @@
       margin-bottom: 12px;
       overflow-wrap: anywhere;
     }
+
     .lesson {
       width: 100%;
       display: block;
       text-align: left;
       margin: 8px 0;
     }
-    .lesson small { display: block; color: var(--muted); margin-top: 4px; }
+
+    .lesson small {
+      display: block;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
     .lesson.active small { color: #183d31; }
-    .content { white-space: pre-wrap; }
+
+    .content {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
     .error { border-color: #a94b55; }
+
     .tag {
       display: inline-block;
       padding: 4px 9px;
@@ -86,6 +120,7 @@
       font-size: 12px;
       margin-bottom: 10px;
     }
+
     .progress {
       height: 6px;
       background: var(--border);
@@ -93,13 +128,15 @@
       overflow: hidden;
       margin: 12px 0;
     }
+
     .progress span {
       display: block;
       height: 100%;
-      width: 0;
       background: var(--accent);
     }
+
     a { color: var(--accent); }
+
     footer {
       text-align: center;
       padding: 24px;
@@ -108,6 +145,7 @@
     }
   </style>
 </head>
+
 <body>
   <header>
     <div class="brand">FINLAB</div>
@@ -117,9 +155,14 @@
 
   <main>
     <nav>
-      <button id="todayTab" class="active" onclick="showTab('today')">Обучение</button>
-      <button id="roadmapTab" onclick="showTab('roadmap')">План курса</button>
+      <button id="todayTab" class="active" onclick="showTab('today')">
+        Обучение
+      </button>
+      <button id="roadmapTab" onclick="showTab('roadmap')">
+        План курса
+      </button>
     </nav>
+
     <div id="status" class="card">Загружаю материалы курса…</div>
     <section id="todayView"></section>
     <section id="roadmapView" hidden></section>
@@ -137,55 +180,64 @@
 
     const $ = id => document.getElementById(id);
 
-    function showError(message) {
-      $("status").className = "card error";
-      $("status").innerHTML = message;
-    }
-
-    function hideStatus() {
-      $("status").hidden = true;
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[char]));
     }
 
     function showTab(tab) {
       state.tab = tab;
+
       $("todayView").hidden = tab !== "today";
       $("roadmapView").hidden = tab !== "roadmap";
+
       $("todayTab").classList.toggle("active", tab === "today");
       $("roadmapTab").classList.toggle("active", tab === "roadmap");
     }
 
+    function titleOf(item, fallback) {
+      if (typeof item === "string") return item;
+
+      return item?.title ||
+        item?.name ||
+        item?.lesson_title ||
+        item?.topic ||
+        fallback;
+    }
+
     function normalizeLessons(data) {
       if (Array.isArray(data)) return data;
-      if (data && Array.isArray(data.lessons)) return data.lessons;
-      if (data && Array.isArray(data.items)) return data.items;
-      if (data && Array.isArray(data.modules)) {
-        return data.modules.flatMap((module, i) =>
+
+      if (Array.isArray(data?.lessons)) return data.lessons;
+      if (Array.isArray(data?.items)) return data.items;
+
+      if (Array.isArray(data?.modules)) {
+        return data.modules.flatMap((module, index) =>
           Array.isArray(module.lessons)
             ? module.lessons.map(lesson => ({
-                module: module.title || module.name || `Модуль ${i + 1}`,
-                ...lesson
+                ...lesson,
+                module: lesson.module ||
+                  module.title ||
+                  module.name ||
+                  `Модуль ${index + 1}`
               }))
             : []
         );
       }
+
       return [];
     }
 
-    function titleOf(item, fallback) {
-      if (typeof item === "string") return item;
-      return item?.title || item?.name || item?.lesson_title ||
-        item?.topic || fallback;
-    }
-
-    function esc(value) {
-      return String(value ?? "").replace(/[&<>"']/g, c => ({
-        "&": "&amp;", "<": "&lt;", ">": "&gt;",
-        '"': "&quot;", "'": "&#39;"
-      }[c]));
-    }
-
     function lessonBody(lesson) {
-      if (typeof lesson === "string") return lesson;
+      if (typeof lesson === "string") {
+        return `<div class="content">${escapeHtml(lesson)}</div>`;
+      }
+
       const fields = [
         ["description", "Описание"],
         ["intro", "Введение"],
@@ -200,62 +252,116 @@
         ["question", "Вопрос"]
       ];
 
-      const found = fields
+      const sections = fields
         .filter(([key]) => lesson?.[key] != null)
         .map(([key, label]) => {
           const value = lesson[key];
-          return `<h3>${label}</h3><div class="content">${
-            esc(typeof value === "object"
-              ? JSON.stringify(value, null, 2)
-              : value)
-          }</div>`;
+
+          const content = typeof value === "object"
+            ? JSON.stringify(value, null, 2)
+            : value;
+
+          return `<h3>${label}</h3>
+            <div class="content">${escapeHtml(content)}</div>`;
         });
 
-      if (!found.length) {
-        found.push(`<div class="content">${esc(JSON.stringify(lesson, null, 2))}</div>`);
+      if (!sections.length) {
+        sections.push(
+          `<div class="content">${
+            escapeHtml(JSON.stringify(lesson, null, 2))
+          }</div>`
+        );
       }
-      return found.join("");
+
+      return sections.join("");
     }
 
     function renderLessons() {
-      const list = $("todayView");
+      const root = $("todayView");
 
       if (!state.lessons.length) {
-        list.innerHTML = '<div class="card">Файл уроков загружен, но список уроков пуст или имеет неизвестный формат.</div>';
+        root.innerHTML = `
+          <div class="card">
+            Уроки не найдены. Проверь структуру файла lessons.json.
+          </div>`;
         return;
       }
 
-      const current = state.lessons[state.selected];
+      state.selected = Math.min(
+        state.selected,
+        state.lessons.length - 1
+      );
 
-      list.innerHTML = `
+      const lesson = state.lessons[state.selected];
+      const progress = Math.round(
+        ((state.selected + 1) / state.lessons.length) * 100
+      );
+
+      root.innerHTML = `
         <div class="card">
-          <div class="tag">УРОК ${state.selected + 1} ИЗ ${state.lessons.length}</div>
-          <h2>${esc(titleOf(current, `Урок ${state.selected + 1}`))}</h2>
-          <div class="progress"><span style="width:${Math.round((state.selected + 1) / state.lessons.length * 100)}%"></span></div>
-          ${current?.module ? `<p class="muted">${esc(current.module)}</p>` : ""}
-          ${lessonBody(current)}
-          <div style="display:flex;gap:8px;margin-top:20px">
-            <button onclick="changeLesson(-1)" ${state.selected === 0 ? "disabled" : ""}>← Назад</button>
-            <button class="primary" onclick="changeLesson(1)" ${state.selected === state.lessons.length - 1 ? "disabled" : ""}>Следующий урок →</button>
+          <div class="tag">
+            УРОК ${state.selected + 1} ИЗ ${state.lessons.length}
+          </div>
+
+          <h2>${escapeHtml(
+            titleOf(lesson, `Урок ${state.selected + 1}`)
+          )}</h2>
+
+          <div class="progress">
+            <span style="width:${progress}%"></span>
+          </div>
+
+          ${lesson?.module
+            ? `<p class="muted">${escapeHtml(lesson.module)}</p>`
+            : ""}
+
+          ${lessonBody(lesson)}
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:20px">
+            <button
+              onclick="changeLesson(-1)"
+              ${state.selected === 0 ? "disabled" : ""}>
+              ← Назад
+            </button>
+
+            <button
+              class="primary"
+              onclick="changeLesson(1)"
+              ${state.selected === state.lessons.length - 1
+                ? "disabled"
+                : ""}>
+              Следующий урок →
+            </button>
           </div>
         </div>
+
         <div class="card">
           <h2>Все уроки</h2>
-          ${state.lessons.map((lesson, i) => `
-            <button class="lesson ${i === state.selected ? "active" : ""}"
-              onclick="selectLesson(${i})">
-              ${i + 1}. ${esc(titleOf(lesson, `Урок ${i + 1}`))}
-              <small>${esc(lesson?.module || lesson?.category || "Материал курса")}</small>
+
+          ${state.lessons.map((item, index) => `
+            <button
+              class="lesson ${index === state.selected ? "active" : ""}"
+              onclick="selectLesson(${index})">
+              ${index + 1}. ${escapeHtml(
+                titleOf(item, `Урок ${index + 1}`)
+              )}
+              <small>${escapeHtml(
+                item?.module || item?.category || "Материал курса"
+              )}</small>
             </button>
           `).join("")}
         </div>`;
     }
 
     function changeLesson(delta) {
-      state.selected = Math.max(0, Math.min(
-        state.lessons.length - 1,
-        state.selected + delta
-      ));
+      state.selected = Math.max(
+        0,
+        Math.min(
+          state.lessons.length - 1,
+          state.selected + delta
+        )
+      );
+
       renderLessons();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -271,21 +377,30 @@
       const data = state.roadmap;
 
       if (!data) {
-        root.innerHTML = '<div class="card">Дорожная карта пока недоступна.</div>';
+        root.innerHTML = `
+          <div class="card">Дорожная карта недоступна.</div>`;
         return;
       }
 
-      const entries = Array.isArray(data) ? data :
-        Array.isArray(data.daily_sequence) ? data.daily_sequence :
-        Array.isArray(data.days) ? data.days :
-        Array.isArray(data.items) ? data.items :
-        Array.isArray(data.weeks) ? data.weeks : null;
+      const entries = Array.isArray(data)
+        ? data
+        : Array.isArray(data.daily_sequence)
+          ? data.daily_sequence
+          : Array.isArray(data.days)
+            ? data.days
+            : Array.isArray(data.items)
+              ? data.items
+              : Array.isArray(data.weeks)
+                ? data.weeks
+                : null;
 
       if (!entries) {
         root.innerHTML = `
           <div class="card">
-            <h2>${esc(titleOf(data, "Дорожная карта курса"))}</h2>
-            <div class="content">${esc(JSON.stringify(data, null, 2))}</div>
+            <h2>${escapeHtml(titleOf(data, "Дорожная карта курса"))}</h2>
+            <div class="content">${escapeHtml(
+              JSON.stringify(data, null, 2)
+            )}</div>
           </div>`;
         return;
       }
@@ -295,56 +410,90 @@
           <h2>План обучения</h2>
           <p class="muted">Этапов в плане: ${entries.length}</p>
         </div>
-        ${entries.map((entry, i) => `
-          <div class="card">
-            <div class="tag">${esc(entry?.day ? `ДЕНЬ ${entry.day}` :
-              entry?.week ? `НЕДЕЛЯ ${entry.week}` :
-              `ЭТАП ${i + 1}`)}</div>
-            <h2>${esc(titleOf(entry, `Этап ${i + 1}`))}</h2>
-            ${entry && typeof entry === "object"
-              ? `<div class="content">${esc(
-                  entry.description || entry.content || entry.topic ||
-                  entry.task || entry.goal || ""
-                )}</div>`
-              : esc(entry)}
-          </div>
-        `).join("")}`;
+
+        ${entries.map((entry, index) => {
+          const label = entry?.day
+            ? `ДЕНЬ ${entry.day}`
+            : entry?.week
+              ? `НЕДЕЛЯ ${entry.week}`
+              : `ЭТАП ${index + 1}`;
+
+          const description =
+            entry?.description ||
+            entry?.content ||
+            entry?.topic ||
+            entry?.task ||
+            entry?.goal ||
+            "";
+
+          return `
+            <div class="card">
+              <div class="tag">${escapeHtml(label)}</div>
+              <h2>${escapeHtml(
+                titleOf(entry, `Этап ${index + 1}`)
+              )}</h2>
+              <div class="content">${escapeHtml(
+                typeof description === "object"
+                  ? JSON.stringify(description, null, 2)
+                  : description || (
+                    typeof entry === "string" ? entry : ""
+                  )
+              )}</div>
+            </div>`;
+        }).join("")}`;
     }
 
-    async function fetchJson(path) {
-      const response = await fetch(path, { cache: "no-store" });
-      if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
+    async function fetchJson(url) {
+      const response = await fetch(url, {
+        cache: "no-store"
+      });
 
-      const text = await response.text();
+      if (!response.ok) {
+        throw new Error(`${url}: HTTP ${response.status}`);
+      }
+
+      const raw = await response.text();
+
       try {
-        return JSON.parse(text);
+        return JSON.parse(raw);
       } catch {
-        throw new Error(`${path}: файл найден, но это не корректный JSON`);
+        throw new Error(`${url}: файл не является корректным JSON`);
       }
     }
 
     async function loadCourseFile(filename) {
-      const inMiniapp = /\/miniapp\/?$/.test(location.pathname);
-      const bases = inMiniapp
-        ? ["../course/", "/fin_academy/course/", "./course/"]
-        : ["./course/", "/fin_academy/course/", "../course/"];
+      const bases = [
+        "/fin_academy/course/",
+        "../course/",
+        "./course/"
+      ];
 
       let lastError;
-      for (const base of [...new Set(bases)]) {
+
+      for (const base of bases) {
         try {
           return await fetchJson(base + filename);
         } catch (error) {
           lastError = error;
+          console.warn("Не удалось загрузить", base + filename);
         }
       }
-      throw lastError || new Error("Не удалось найти " + filename);
+
+      throw lastError || new Error(
+        "Не удалось найти файл " + filename
+      );
     }
 
     async function init() {
+      $("status").hidden = false;
+      $("status").className = "card";
+      $("status").textContent = "Загружаю материалы курса…";
+
       try {
         if (window.Telegram?.WebApp) {
           Telegram.WebApp.ready();
           Telegram.WebApp.expand();
+
           try {
             Telegram.WebApp.setHeaderColor("#101923");
             Telegram.WebApp.setBackgroundColor("#101923");
@@ -359,20 +508,37 @@
         state.lessons = normalizeLessons(lessonsData);
         state.roadmap = roadmapData;
 
-        hideStatus();
+        $("status").hidden = true;
+
         renderLessons();
         renderRoadmap();
         showTab("today");
+
       } catch (error) {
-        console.error("FINLAB course loading error:", error);
-        showError(`
+        console.error("FINLAB loading error:", error);
+
+        $("status").hidden = false;
+        $("status").className = "card error";
+
+        $("status").innerHTML = `
           <h2>Не удалось загрузить курс</h2>
-          <p>Не получилось загрузить JSON-файлы курса. Проверь, что оба файла доступны в GitHub Pages.</p>
-          <p><a href="../course/lessons.json" target="_blank">Открыть lessons.json</a></p>
-          <p><a href="../course/roadmap.json" target="_blank">Открыть roadmap.json</a></p>
-          <p class="muted">${esc(error.message || error)}</p>
-          <button onclick="init()">Повторить загрузку</button>
-        `);
+          <p>Не удалось загрузить файлы курса из GitHub Pages.</p>
+
+          <p>
+            <a href="/fin_academy/course/lessons.json" target="_blank">
+              Открыть lessons.json
+            </a>
+          </p>
+
+          <p>
+            <a href="/fin_academy/course/roadmap.json" target="_blank">
+              Открыть roadmap.json
+            </a>
+          </p>
+
+          <p class="muted">${escapeHtml(error.message || error)}</p>
+
+          <button onclick="init()">Повторить загрузку</button>`;
       }
     }
 
