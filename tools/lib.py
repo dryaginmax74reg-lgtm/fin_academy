@@ -62,6 +62,8 @@ def book(title,kind="Книга"): return {"kind":kind,"title":title}
 def watch(title): return {"kind":"YouTube · найди","title":title}
 def client(title,html): return {"t":"client","title":title,"html":html}
 def lesson(n,pred,body,cl,quiz,review,tp,wr,cards,minutes=(13,6,15)):
+    k=(n*3)%len(quiz) if len(quiz)>1 else 0
+    quiz=quiz[k:]+quiz[:k]  # разный порядок типов заданий от урока к уроку
     steps=[pred]+body+[cl,{"t":"quiz"},tp,wr]
     return {"n":n,"minutes":{"read":minutes[0],"practice":minutes[1],"test":minutes[2]},"steps":steps,"quiz":quiz,"review":review,
             "cards":[{"id":f"{n}-{chr(97+i)}","q":q,"a":a} for i,(q,a) in enumerate(cards)]}
