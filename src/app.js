@@ -64,6 +64,11 @@ function tests(n){return S.events.filter(r=>r[1]==="Тест"&&Number(r[2])===n)
 function best(n){const t=tests(n);if(!t.length)return null;return Math.max(...t.map(r=>r[4]/r[5]))}
 const passed=n=>{const b=best(n);return b!==null&&b>=.7};
 const taken=n=>best(n)!==null;
+function tests2(type,id){return S.events.filter(r=>r[1]===type&&Number(r[2])===id)}
+function tbest(type,id){const t=tests2(type,id);return t.length?Math.max(...t.map(r=>r[4]/r[5])):null}
+const tpassed=(type,id)=>{const b=tbest(type,id);return b!==null&&b>=.7};
+const rangeReady=(a,b)=>{for(let n=a;n<=b;n++)if(!hasContent(n))return false;return true};
+function pendingTest(){for(let w=1;w<=12;w++){if(!taken(w*5))return null;if(!tpassed("Недельный",w))return ["Недельный",w];if(w%2===0&&!tpassed("Итоговый",w/2))return ["Итоговый",w/2]}return null}
 function days(){return [...new Set(S.events.map(r=>String(r[0]).slice(0,10)))].sort()}
 function streak(){const ds=new Set(days());let d=new Date(todayMsk()+"T12:00:00Z"),c=0;if(!ds.has(d.toISOString().slice(0,10)))d.setUTCDate(d.getUTCDate()-1);while(ds.has(d.toISOString().slice(0,10))){c++;d.setUTCDate(d.getUTCDate()-1)}return c}
 function nextLesson(){for(const l of CATALOG){if(!passed(l[0]))return l[0]}return 60}
@@ -93,6 +98,7 @@ function vToday(){
   <div class="hero"><div class="eyebrow">№ ${n} · ${BLOCKS[L[1]]} · ${label}</div><h2>${esc(L[2])}</h2><p>${esc(L[3])}.</p>
   ${ready?`<button class="btn inv" onclick="openLesson(${n})">${taken(n)?"Пройти ещё раз":"Начать урок"} →</button>`:`<button class="btn inv" disabled>Урок готовится</button>`}</div>
   ${due?`<button class="card row" onclick="go('rep')" style="text-align:left"><div class="grow"><b>Повторение</b><div class="ls">${due} карточ${due===1?"ка":due<5?"ки":"ек"} ждут. 2 минуты.</div></div><span class="btn ghost" style="min-height:40px;padding:0 16px">Начать</span></button>`:""}
+  ${(()=>{const pt=pendingTest();if(!pt)return"";const W=pt[0]==="Недельный",ok=W?rangeReady(pt[1]*5-4,pt[1]*5):rangeReady(1,pt[1]*10);if(!ok)return"";return `<button class="card row" onclick="openTest('${pt[0]}',${pt[1]})" style="text-align:left"><div class="grow"><b>${W?`Тест недели ${pt[1]}`:`Итоговый тест: уроки 1–${pt[1]*10}`}</b><div class="ls">Закрепление пройденного. Можно сегодня или утром в понедельник.</div></div><span class="btn ghost" style="min-height:40px;padding:0 16px">Начать</span></button>`})()}
   <div class="stats"><div class="stat"><b class="num">${done}</b><span>пройдено из 60</span></div><div class="stat"><b class="num">${s}</b><span>дней подряд</span></div><div class="stat"><b class="num">${avgScore()}</b><span>средний балл</span></div></div>
   <div class="card"><div class="eyebrow">История-крючок</div><p style="margin-top:6px;font-weight:600">${esc(L[4])}</p></div></div>`;
 }
@@ -105,10 +111,17 @@ function vProg(){
       const sub=ok?`Тест ${Math.round(best(n)*100)}%`:tk?`Тест ${Math.round(best(n)*100)}% · повторить`:(av?"Доступно":"Готовится");
       h+=`<button class="lrow ${ok?"done":n===nx?"next":""}" ${av?`onclick="openLesson(${n})"`:"disabled"}><span class="lnum num">${ok?"✓":n}</span><span class="grow"><span class="lt"><span class="bchip">${BLOCKS[L[1]]}</span>${esc(L[2])}</span><br><span class="ls">${sub}</span></span></button>`;
     }
+    const wn=w+1,rdy=rangeReady(1,wn*5);
+    h+=testRow("Недельный",wn,wn*5,rangeReady(wn*5-4,wn*5));
+    if(wn%2===0)h+=testRow("Итоговый",wn/2,wn*5,rdy);
     h+=`</section>`;
   }
   return h+"</div>";
 }
+function testRow(type,id,end,ready){
+  const W=type==="Недельный",num=id,b=tbest(type,num),open=ready&&taken(end),title=W?`Тест недели ${num}`:`Итоговый тест: уроки 1–${num*10}`;
+  const sub=b!==null?`${Math.round(b*100)}%${b>=.7?"":" · пересдать"}`:open?"Доступен, 15 заданий":"Откроется после урока "+end;
+  return `<button class="lrow trow ${b!==null&&b>=.7?"done":""}" ${open?`onclick="openTest('${type}',${num})"`:"disabled"}><span class="lnum num">${b!==null&&b>=.7?"✓":W?"Т":"★"}</span><span class="grow"><span class="lt"><span class="bchip">${W?"Закрепление":"Итог"}</span>${title}</span><br><span class="ls">${sub}</span></button>`}
 let rep={i:0,flip:false,queue:null};
 function vRep(){
   if(!rep.queue)rep.queue=dueCards();
@@ -125,13 +138,14 @@ function vStat(){
   const done=CATALOG.filter(l=>passed(l[0])).length,tk=CATALOG.filter(l=>taken(l[0])).length,nxt=nextLesson();
   let blocks="";Object.keys(BLOCKS).forEach(b=>{const ls=CATALOG.filter(l=>l[1]===b),d=ls.filter(l=>passed(l[0])).length;blocks+=`<div class="bl"><span>${BLOCKS[b]}</span><div class="bar"><i style="width:${d/ls.length*100}%"></i></div><small class="num">${d}/${ls.length}</small></div>`});
   const hm=CATALOG.map(l=>{const n=l[0];return `<i class="${passed(n)?"d":taken(n)?"w":""} ${n===nxt?"n":""}" title="Урок ${n}"></i>`}).join("");
-  const weak=CATALOG.filter(l=>taken(l[0])&&!passed(l[0])),log=S.events.filter(r=>r[1]==="Тест").slice(-5).reverse();
+  const weak=CATALOG.filter(l=>taken(l[0])&&!passed(l[0])),log=S.events.filter(r=>["Тест","Недельный","Итоговый"].includes(r[1])).slice(-6).reverse();
   return `<div class="stack"><div class="top"><h1 class="title">Прогресс</h1>${syncChip()}</div>
   <div class="stats"><div class="stat"><b class="num">${done}</b><span>пройдено</span></div><div class="stat"><b class="num">${streak()}</b><span>серия</span></div><div class="stat"><b class="num">${avgScore()}</b><span>ср. балл</span></div></div>
   <div class="card"><div class="eyebrow" style="margin-bottom:10px">60 уроков · ${tk} с тестом</div><div class="hm">${hm}</div></div>
   <div class="card"><div class="eyebrow" style="margin-bottom:12px">По блокам</div>${blocks}</div>
   ${weak.length?`<div class="card callout warm"><div class="eyebrow">Вернуться</div>${weak.map(l=>`<div>№ ${l[0]} · ${esc(l[2])}</div>`).join("")}</div>`:""}
-  <div class="card"><div class="eyebrow" style="margin-bottom:8px">Последние тесты</div>${log.length?log.map(r=>`<div class="row" style="padding:6px 0"><span class="grow">Урок ${r[2]}</span><b class="num">${f1(r[4],2)} / ${r[5]}</b></div>`).join(""):'<p class="ls">После первого теста здесь появится история.</p>'}</div>
+  <div class="card"><div class="eyebrow" style="margin-bottom:10px">Тесты недели и итоговые</div>${[1,2,3,4,5,6,7,8,9,10,11,12].map(w=>{const b=tbest("Недельный",w),c=w%2===0?tbest("Итоговый",w/2):undefined;return `<div class="row" style="padding:4px 0"><span class="grow">Неделя ${w}</span><b class="num" style="color:${b===null?"var(--fg3)":b>=.7?"var(--ok)":"var(--bad)"}">${b===null?"—":Math.round(b*100)+"%"}</b>${c!==undefined?`<span class="bchip" style="margin-left:8px">итог ${w/2}: ${c===null?"—":Math.round(c*100)+"%"}</span>`:""}</div>`}).join("")}</div>
+  <div class="card"><div class="eyebrow" style="margin-bottom:8px">Последние тесты</div>${log.length?log.map(r=>`<div class="row" style="padding:6px 0"><span class="grow">${r[1]==="Тест"?"Урок "+r[2]:r[1]==="Недельный"?"Тест недели "+r[2]:"Итоговый тест "+r[2]}</span><b class="num">${f1(r[4],2)} / ${r[5]}</b></div>`).join(""):'<p class="ls">После первого теста здесь появится история.</p>'}</div>
   <div class="card stack"><div class="eyebrow">Синхронизация с Google Таблицей</div>
    <div class="field"><label for="cfgurl">Адрес веб-приложения Apps Script</label><input type="text" id="cfgurl" value="${esc(CFG.url)}" placeholder="https://script.google.com/macros/s/…/exec" style="font:500 15px var(--ui)"></div>
    <div class="field"><label for="cfgtok">Токен</label><input type="text" id="cfgtok" value="${esc(CFG.token)}" placeholder="тот же, что в скрипте" style="font:500 15px var(--ui)"></div>
@@ -139,133 +153,7 @@ function vStat(){
   </div>`;
 }
 
-/* ===== PLAYER ===== */
-let P=null;
-async function openLesson(n){
-  try{const D=await loadLesson(n);P={n,D,i:0,t0:Date.now(),pick:{},calc:{pv:2,r:12,t:5,m:1},cs:{r:14,p:100},gen:{},q:{i:0,ans:[],crit:[],done:false,res:null}};drawPlayer()}
-  catch(e){toast("Не удалось загрузить урок. Проверь интернет.")}
-}
-function closeLesson(){P=null;$("#layer").innerHTML="";document.body.style.overflow="";render()}
-function drawPlayer(){
-  const D=P.D,st=D.steps[P.i],L=CATALOG[P.n-1],body=STEPS[st.t](st);
-  const last=P.i===D.steps.length-1;
-  $("#layer").innerHTML=`<div class="player ${P.shown?"":"enter"}" role="dialog" aria-label="Урок ${P.n}">
-   <div class="phead"><div class="row"><button class="x" onclick="closeLesson()" aria-label="Закрыть">✕</button><div class="grow"><div class="eyebrow">Урок ${P.n} · ${BLOCKS[L[1]]}</div></div><span class="ls num">${P.i+1}/${D.steps.length}</span></div>
-   <div class="seg">${D.steps.map((_,k)=>`<i class="${k<=P.i?"on":""}"></i>`).join("")}</div></div>
-   <div class="pbody" id="pbody"><div class="pin">${body.html}</div></div>
-   <div class="pfoot"><div class="in">${P.i>0?`<button class="btn ghost" onclick="stepTo(-1)" aria-label="Назад">←</button>`:""}${body.foot||`<button class="btn block" onclick="${last?"closeLesson()":"stepTo(1)"}">${last?"Готово":"Дальше"}</button>`}</div></div></div>`;
-  P.shown=true;document.body.style.overflow="hidden";const pb=$("#pbody");if(pb)pb.scrollTop=0;
-}
-function stepTo(d){P.i=Math.max(0,Math.min(P.D.steps.length-1,P.i+d));drawPlayer()}
-const FV=(pv,r,t,m)=>pv*Math.pow(1+r/100/m,m*t);
-function readIdx(st){const rs=P.D.steps.filter(s=>s.t==="read");return [rs.indexOf(st)+1,rs.length]}
-
-const STEPS={
- predict(st){
-  const sel=P.pick[P.i],mins=P.D.minutes||{};
-  return {html:`<div class="kicker">${esc(st.kicker||"История")}</div><h1 class="h">${esc(st.title)}</h1>
-   <div class="lead">${st.lead}</div>
-   ${P.D.minutes?`<div class="row" style="flex-wrap:wrap;gap:8px"><span class="rt">📖 Материал ≈ ${mins.read} мин</span><span class="rt">🎛 Практика ≈ ${mins.practice} мин</span><span class="rt">✅ Тест ≈ ${mins.test} мин</span></div>`:""}
-   <div class="callout"><div class="eyebrow">Предскажи</div><b>${esc(st.q)}</b></div>
-   <div class="opts">${st.opts.map((o,k)=>`<button class="opt ${sel===undefined?"":k===st.correct?"good":k===sel?"wrong":""}" ${sel!==undefined?"disabled":""} onclick="P.pick[P.i]=${k};drawPlayer()">${esc(o)}</button>`).join("")}</div>
-   ${sel!==undefined?`<div class="callout ${sel===st.correct?"ok":"warm"} pop"><div class="eyebrow">${sel===st.correct?"Точно":"Почти никто не угадывает"}</div><div class="p">${st.reveal}</div></div>${st.after?`<div class="callout warm pop"><div class="eyebrow">${esc(st.afterTitle||"А в жизни")}</div><div class="p">${st.after}</div></div>`:""}`:""}`,
-   foot:sel===undefined?`<button class="btn block" disabled>Выбери вариант</button>`:null};
- },
- read(st){
-  const [i,n]=readIdx(st);
-  return {html:`<div class="read stack" style="gap:16px"><div class="kicker">Материал · часть ${i} из ${n}</div><span class="rt">⏱ ≈ ${st.min} мин чтения</span><h1 class="h">${esc(st.title)}</h1>${st.html}</div>`};
- },
- calc(st){ // generic calculator
-  const g=P.gen[P.i]||(P.gen[P.i]=Object.fromEntries(st.inputs.map(x=>[x.id,x.val])));
-  const ids=st.inputs.map(x=>x.id);
-  const ev=(expr)=>{try{return new Function(...ids,"fmt","return ("+expr+")")(...ids.map(k=>g[k]),f1)}catch(e){return "—"}};
-  return {html:`<div class="kicker">${esc(st.kicker||"Поиграй")}</div><h1 class="h">${esc(st.title)}</h1><div class="p">${st.intro||""}</div>
-   ${st.inputs.map(x=>`<div class="field"><label>${esc(x.label)} <output id="o_${x.id}">${f1(g[x.id],x.dec??2)} ${esc(x.unit||"")}</output></label><input type="range" min="${x.min}" max="${x.max}" step="${x.step}" value="${g[x.id]}" oninput="P.gen[P.i]['${x.id}']=+this.value;updGen()" aria-label="${esc(x.label)}"></div>`).join("")}
-   <div id="genout">${genOut(st,ev)}</div>`};
- },
- compound(st){
-  const c=P.calc;
-  return {html:`<div class="kicker">Поиграй</div><h1 class="h">Сложный процент: проценты на проценты</h1>
-   <p class="p">Двигай ползунки. Смотри, как расходятся две линии: простой процент растёт по прямой, сложный — всё круче.</p>
-   <div class="field"><label>Сумма <output>${f1(c.pv)} млн ₽</output></label><input type="range" min="0.5" max="10" step="0.5" value="${c.pv}" oninput="P.calc.pv=+this.value;updCalc()" aria-label="Сумма"></div>
-   <div class="field"><label>Ставка в год <output>${f1(c.r)}%</output></label><input type="range" min="1" max="30" step="0.5" value="${c.r}" oninput="P.calc.r=+this.value;updCalc()" aria-label="Ставка"></div>
-   <div class="field"><label>Срок <output>${c.t} лет</output></label><input type="range" min="1" max="40" step="1" value="${c.t}" oninput="P.calc.t=+this.value;updCalc()" aria-label="Срок"></div>
-   <div class="field"><label>Капитализация</label><div class="pair"><button class="opt ${c.m===1?"sel":""}" onclick="P.calc.m=1;drawPlayer()">Раз в год</button><button class="opt ${c.m===12?"sel":""}" onclick="P.calc.m=12;drawPlayer()">Ежемесячно</button></div></div>
-   <div id="calcout">${calcOut()}</div>`};
- },
- deferred(st){
-  const c=P.cs,r=c.r/100,pvB=350+350/Math.pow(1+r,2)*(c.p/100),be=(Math.sqrt(350/250)-1)*100;
-  return {html:`<div class="kicker">Кейс</div><h1 class="h">Продажа бизнеса: 600 сейчас или 350 + 350 через два года?</h1>
-   <p class="p">Покупатель предлагает два варианта. Какой выгоднее? Зависит от ставки, по которой клиент может использовать деньги, и от того, насколько надёжен второй платёж. Ключевая ставка Банка России сейчас <b>${KEYRATE}%</b>.</p>
-   <div class="field"><label>Ставка клиента (альтернатива) <output>${f1(c.r)}%</output></label><input type="range" min="0" max="30" step="0.5" value="${c.r}" oninput="P.cs.r=+this.value;updCase()" aria-label="Ставка"></div>
-   <div class="field"><label>Вероятность получить 2-й платёж <output>${c.p}%</output></label><input type="range" min="50" max="100" step="1" value="${c.p}" oninput="P.cs.p=+this.value;updCase()" aria-label="Вероятность"></div>
-   <div id="caseout">${caseOut(pvB,pvB>600,be)}</div>`};
- },
- client(st){return {html:`<div class="kicker">Клиент</div><h1 class="h">${esc(st.title)}</h1>${st.html}`}},
- quiz(){
-  const Q=P.D.quiz,q=P.q;
-  if(q.done){const r=q.res;return {html:`<div class="kicker">Тест завершён</div><h1 class="h">${Math.round(r.pct*100)}%: ${f1(r.score,2)} из ${r.max}</h1><p class="p">Результат записан. Дальше фишка для встречи.</p>`}}
-  const item=Q[q.i],a=q.ans[q.i];let inner="",foot="";
-  if(item.k==="num"){inner=`<div class="field"><input type="number" inputmode="decimal" step="any" id="numin" value="${a!==undefined?a.v:""}" ${a!==undefined?"disabled":""} placeholder="Ответ, ${esc(item.unit||"")}" aria-label="Ответ"></div>`;if(a===undefined)foot=`<button class="btn block" onclick="answerNum()">Проверить</button>`}
-  else if(item.k==="choice"){inner=`<div class="opts">${item.opts.map((o,k)=>`<button class="opt ${a!==undefined?(k===item.ans?"good":k===a.v?"wrong":""):""}" ${a!==undefined?"disabled":""} onclick="answerChoice(${k})">${esc(o)}</button>`).join("")}</div>`}
-  else{inner=`<textarea id="opentxt" placeholder="Напиши ответ своими словами, как сказал бы клиенту" ${a!==undefined?"disabled":""}>${a!==undefined?esc(a.v):""}</textarea>`;
-    if(a===undefined)foot=`<button class="btn block" onclick="answerOpen()">Показать эталон</button>`;
-    else inner+=`<div class="callout ok pop"><div class="eyebrow">Эталонный ответ</div><p class="p">${esc(item.model)}</p></div><div class="eyebrow">Отметь, что ты учёл</div>${item.crit.map((c,k)=>`<button class="check ${q.crit[k]?"on":""}" onclick="P.q.crit[${k}]=!P.q.crit[${k}];drawPlayer()"><span class="bx">${q.crit[k]?"✓":""}</span><span>${esc(c)}</span></button>`).join("")}`}
-  if(a!==undefined&&item.k!=="open")inner+=`<div class="callout ${a.ok?"ok":"bad"} pop"><div class="eyebrow">${a.ok?"Верно":"Не совсем"}</div><p class="p">${esc(item.why)}</p></div>`;
-  if(a!==undefined)foot=`<button class="btn block" onclick="nextQ()">${q.i===Q.length-1?"Завершить тест":"Дальше"}</button>`;
-  return {html:`<div class="kicker">Тест · вопрос ${q.i+1} из ${Q.length} · ≈ 15 мин на весь тест</div><h1 class="h" style="font-size:clamp(20px,5vw,26px)">${esc(item.q)}</h1>${inner}`,foot};
- },
- tip(st){return {html:`<div class="kicker">Фишка для встречи</div><h1 class="h">Скажи это клиенту</h1>
-   <div class="hero" style="border-radius:24px"><div class="eyebrow">Факт</div><h2>${esc(st.fact)}</h2><p>${esc(st.fact2||"")}</p></div>
-   <div class="card"><div class="eyebrow">Вопрос клиенту</div><p class="p" style="font-size:19px;font-weight:700;margin-top:6px">${esc(st.question)}</p></div>
-   <p class="ls">${esc(st.why||"")}</p>`}},
- wrap(st){const r=P.q.res;
-  return {html:`<div class="kicker">Итог</div><h1 class="h">${r&&r.pct>=.7?"Урок пройден":"Урок записан, тему стоит повторить"}</h1>
-   ${r?`<div class="card row"><div class="big num">${Math.round(r.pct*100)}%</div><div class="grow"><b>${f1(r.score,2)} из ${r.max}</b><div class="ls">Порог перехода — 70%</div></div></div>`:`<div class="callout warm">Пройди тест, чтобы результат записался.</div>`}
-   <div class="callout"><div class="eyebrow">Что ты теперь умеешь</div><p class="p">${esc(st.can)}</p></div>
-   <div class="eyebrow">Углубиться</div><div class="links">${(st.links||[]).map(l=>l.url?`<a href="${esc(l.url)}" target="_blank" rel="noopener"><b>${esc(l.title)}</b><span>${esc(l.sub||"")}</span></a>`:`<div class="mini" style="margin-bottom:8px"><span>${esc(l.kind||"Книга")}</span><b style="font-family:var(--ui);font-size:16px">${esc(l.title)}</b></div>`).join("")}</div>
-   <div class="callout ok"><div class="eyebrow">Карточки</div><p class="p">${(INDEX.cards[P.n]||[]).length} карточек придут во вкладку «Повтор» завтра.</p></div>`};
- }
-};
-function genOut(st,ev){
-  return `<div class="pair">${st.outs.map(o=>`<div class="mini"><span>${esc(o.label)}</span><b class="num">${typeof ev(o.expr)==="number"?f1(ev(o.expr),o.dec??2):ev(o.expr)} ${esc(o.unit||"")}</b></div>`).join("")}</div>${st.verdict?`<div class="callout"><div class="eyebrow">Вывод</div><p class="p">${ev("`"+st.verdict+"`")}</p></div>`:""}`;
-}
-function updGen(){
-  const st=P.D.steps[P.i],g=P.gen[P.i],ids=st.inputs.map(x=>x.id);
-  const ev=(expr)=>{try{return new Function(...ids,"fmt","return ("+expr+")")(...ids.map(k=>g[k]),f1)}catch(e){return "—"}};
-  $("#genout").innerHTML=genOut(st,ev);
-  st.inputs.forEach(x=>{const o=$("#o_"+x.id);if(o)o.textContent=f1(g[x.id],x.dec??2)+" "+(x.unit||"")});
-}
-function calcOut(){
-  const c=P.calc,F=FV(c.pv,c.r,c.t,c.m),Fs=c.pv*(1+c.r/100*c.t),eff=(Math.pow(1+c.r/100/c.m,c.m)-1)*100;
-  const pts=[],pts2=[],N=Math.min(c.t,60);
-  for(let i=0;i<=N;i++){const tt=c.t*i/N;pts.push([i/N,FV(c.pv,c.r,tt,c.m)]);pts2.push([i/N,c.pv*(1+c.r/100*tt)])}
-  const mx=Math.max(F,Fs,1),W=600,H=180;
-  const path=a=>a.map((p,i)=>(i?"L":"M")+(p[0]*(W-20)+10).toFixed(1)+" "+(H-12-(p[1]/mx)*(H-30)).toFixed(1)).join(" ");
-  return `<div class="pair"><div class="mini"><span>Сложный процент</span><b class="num">${f1(F,2)} млн</b></div><div class="mini"><span>Простой процент</span><b class="num">${f1(Fs,2)} млн</b></div></div>
-  <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="График роста"><path d="${path(pts2)}" fill="none" stroke="var(--fg3)" stroke-width="2.5" stroke-dasharray="6 6"/><path d="${path(pts)}" fill="none" stroke="var(--tint)" stroke-width="4" stroke-linecap="round"/></svg>
-  <div class="callout"><div class="eyebrow">Разница</div><p class="p">Сложный процент добавил <b>${f1(F-Fs,2)} млн ₽</b> сверх простого. Эффективная ставка <b>${f1(eff,2)}%</b>, удвоение примерно за <b>${f1(72/c.r,1)}</b> лет по правилу 72.</p></div>`;
-}
-function updCalc(){$("#calcout").innerHTML=calcOut();const c=P.calc,o=document.querySelectorAll(".pin .field output");o[0].textContent=f1(c.pv)+" млн ₽";o[1].textContent=f1(c.r)+"%";o[2].textContent=c.t+" лет"}
-function caseOut(pvB,ok,be){
-  return `<div class="pair"><div class="mini"><span>Вариант А</span><b class="num">600 млн</b></div><div class="mini"><span>Вариант Б сегодня</span><b class="num">${f1(pvB,1)} млн</b></div></div>
-  <div class="callout ${ok?"ok":"bad"}"><div class="eyebrow">Вердикт</div><p class="p">${ok?"Вариант Б стоит дороже: ждать выгодно.":"Вариант А выгоднее: деньги сегодня весомее."} Разница <b>${f1(Math.abs(pvB-600),1)} млн ₽</b>.</p></div>
-  <p class="ls">Формула: 350 + 350 × вероятность / (1 + r)². Ставка безубыточности при 100% надёжности — <b>${f1(be,2)}%</b>. При ставке ${KEYRATE}% второй платёж должен быть надёжным минимум на <b>${f1(250*Math.pow(1+KEYRATE/100,2)/350*100,1)}%</b>.</p>`;
-}
-function updCase(){const c=P.cs,r=c.r/100,pvB=350+350/Math.pow(1+r,2)*(c.p/100),be=(Math.sqrt(350/250)-1)*100;$("#caseout").innerHTML=caseOut(pvB,pvB>600,be);const o=document.querySelectorAll(".pin .field output");o[0].textContent=f1(c.r)+"%";o[1].textContent=c.p+"%"}
-function answerNum(){const v=parseFloat(String($("#numin").value).replace(",","."));if(isNaN(v)){toast("Введи число");return}const it=P.D.quiz[P.q.i];P.q.ans[P.q.i]={v,ok:Math.abs(v-it.ans)<=it.tol};drawPlayer()}
-function answerChoice(k){const it=P.D.quiz[P.q.i];P.q.ans[P.q.i]={v:k,ok:k===it.ans};drawPlayer()}
-function answerOpen(){const v=$("#opentxt").value.trim();if(v.length<3){toast("Напиши хотя бы пару слов, потом сверимся с эталоном");return}P.q.ans[P.q.i]={v,ok:true};P.q.crit=[];drawPlayer()}
-function nextQ(){
-  const Q=P.D.quiz;
-  if(P.q.i<Q.length-1){P.q.i++;drawPlayer();return}
-  let score=0;Q.forEach((it,i)=>{const a=P.q.ans[i];if(it.k==="open")score+=P.q.crit.filter(Boolean).length/it.crit.length;else if(a&&a.ok)score++});
-  score=Math.round(score*100)/100;const sec=Math.round((Date.now()-P.t0)/1000);
-  P.q.res={score,max:Q.length,pct:score/Q.length};P.q.done=true;
-  addEvent("Тест",P.n,Q.length+" вопросов",score,Q.length,sec);
-  const oi=Q.findIndex(x=>x.k==="open");if(oi>=0)addEvent("Открытый",P.n,"критериев "+P.q.crit.filter(Boolean).length+" из "+Q[oi].crit.length,P.q.crit.filter(Boolean).length,Q[oi].crit.length);
-  P.i=P.D.steps.findIndex(s=>s.t==="tip");drawPlayer();
-}
-
+/*__WIDGETS__*/
+/*__PLAYER__*/
 /* ===== BOOT ===== */
 (async()=>{render();await loadIndex();render();if(CFG.url){setSync("","Подключаю таблицу…");pull()}})();

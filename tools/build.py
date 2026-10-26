@@ -4,7 +4,7 @@ import json,glob,os,re
 R=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 cat=open(f'{R}/src/catalog.json').read()
 css=open(f'{R}/src/style.css').read()
-js=open(f'{R}/src/app.js').read().replace('__CATALOG__',cat)
+js=open(f'{R}/src/app.js').read().replace('__CATALOG__',cat).replace('/*__WIDGETS__*/',open(f'{R}/src/widgets.js').read()).replace('/*__PLAYER__*/',open(f'{R}/src/player.js').read())
 html=f'''<!doctype html>
 <html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
