@@ -81,6 +81,7 @@ const STEPS={
    ${r?`<div class="card row"><div class="big num">${Math.round(r.pct*100)}%</div><div class="grow"><b>${f1(r.score,2)} из ${r.max}</b><div class="ls">Порог перехода — 70%</div></div></div>`:`<div class="callout warm">Пройди тест, чтобы результат записался.</div>`}
    <div class="callout"><div class="eyebrow">Что ты теперь умеешь</div><p class="p">${esc(st.can)}</p></div>
    <div class="eyebrow">Углубиться</div><div class="links">${(st.links||[]).map(l=>l.url?`<a href="${esc(l.url)}" target="_blank" rel="noopener"><b>${esc(l.title)}</b><span>${esc(l.sub||"")}</span></a>`:`<div class="mini" style="margin-bottom:8px"><span>${esc(l.kind||"Книга")}</span><b style="font-family:var(--ui);font-size:16px">${esc(l.title)}</b></div>`).join("")}</div>
+   <button class="callout" style="text-align:left;width:100%" onclick="closeLesson();gl.f=${P.n};gl.mode='list';go('gl')"><div class="eyebrow">Словарь профи</div><p class="p"><b>Термины урока</b> — как они звучат у профессионалов и как объяснить их клиенту. Открыть →</p></button>
    <div class="callout ok"><div class="eyebrow">Карточки</div><p class="p">${(INDEX.cards[P.n]||[]).length} карточек придут во вкладку «Повтор» завтра.</p></div>`};
  },
  twrap(){const r=P.q.res,miss=r?r.miss:[];

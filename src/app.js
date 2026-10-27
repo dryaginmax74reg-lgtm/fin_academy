@@ -78,14 +78,14 @@ const BOX=[1,3,7,30];
 function avgScore(){const b=CATALOG.map(l=>best(l[0])).filter(x=>x!==null);return b.length?Math.round(b.reduce((a,c)=>a+c,0)/b.length*100)+"%":"—"}
 
 /* ===== SHELL ===== */
-const ICONS={today:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',prog:'<path d="M4 6h16M4 12h16M4 18h10"/>',rep:'<path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/>',stat:'<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>'};
-let tab=(location.hash||"#today").slice(1);if(!["today","prog","rep","stat"].includes(tab))tab="today";
-const TABS=[["today","Сегодня"],["prog","Программа"],["rep","Повтор"],["stat","Прогресс"]];
+const ICONS={today:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',prog:'<path d="M4 6h16M4 12h16M4 18h10"/>',gl:'<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h11"/>',rep:'<path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/>',stat:'<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>'};
+let tab=(location.hash||"#today").slice(1);if(!["today","prog","gl","rep","stat"].includes(tab))tab="today";
+const TABS=[["today","Сегодня"],["prog","Программа"],["gl","Словарь"],["rep","Повтор"],["stat","Прогресс"]];
 function nav(){const due=dueCards().length;
   const h=TABS.map(([k,l])=>`<button class="tab" role="tab" aria-selected="${tab===k}" onclick="go('${k}')"><svg viewBox="0 0 24 24">${ICONS[k]}</svg><span>${l}</span>${k==="rep"&&due?`<em class="dot" style="font-style:normal">${due}</em>`:""}</button>`).join("");
   $("#tabbar").innerHTML=h;$("#rail").innerHTML=`<div class="brand">Fin<b>Lab</b> Academy</div>`+h}
 function go(k){tab=k;try{history.replaceState(null,"","#"+k)}catch(e){}render();window.scrollTo(0,0)}
-function render(){nav();$("#view").innerHTML=({today:vToday,prog:vProg,rep:vRep,stat:vStat})[tab]()}
+function render(){nav();$("#view").innerHTML=({today:vToday,prog:vProg,gl:vGl,rep:vRep,stat:vStat})[tab]()}
 
 /* ===== VIEWS ===== */
 function vToday(){
@@ -122,6 +122,50 @@ function testRow(type,id,end,ready){
   const W=type==="Недельный",num=id,b=tbest(type,num),open=ready&&taken(end),title=W?`Тест недели ${num}`:`Итоговый тест: уроки 1–${num*10}`;
   const sub=b!==null?`${Math.round(b*100)}%${b>=.7?"":" · пересдать"}`:open?"Доступен, 15 заданий":"Откроется после урока "+end;
   return `<button class="lrow trow ${b!==null&&b>=.7?"done":""}" ${open?`onclick="openTest('${type}',${num})"`:"disabled"}><span class="lnum num">${b!==null&&b>=.7?"✓":W?"Т":"★"}</span><span class="grow"><span class="lt"><span class="bchip">${W?"Закрепление":"Итог"}</span>${title}</span><br><span class="ls">${sub}</span></button>`}
+/* ===== СЛОВАРЬ ПРОФИ ===== */
+let GL=store.get("fl_gl",[]);
+async function loadGl(){try{const r=await fetch("glossary.json",{cache:"no-cache"});if(r.ok){GL=await r.json();store.set("fl_gl",GL);if(tab==="gl")render()}}catch(e){}}
+const gl={q:"",f:0,open:null,mode:"list",queue:[],i:0,pick:null,opts:[],ok:0};
+const tkn=()=>{S.terms=S.terms||{};return S.terms};
+const glOpen=t=>taken(t.n);
+function glFilter(){const q=gl.q.trim().toLowerCase();return GL.filter(t=>glOpen(t)&&(!gl.f||t.n===gl.f)&&(!q||(t.t+" "+t.e+" "+t.p).toLowerCase().includes(q)))}
+function glCard(t){const k=tkn()[t.id];return `<div class="card stack pop" style="gap:10px">
+ <div class="eyebrow">Урок ${t.n}${t.e?" · "+esc(t.e):""}</div><h2 class="disp" style="margin:0">${esc(t.t)}</h2>
+ <div class="callout"><div class="eyebrow">Простыми словами</div><p class="p">${esc(t.p)}</p></div>
+ <div class="callout warm"><div class="eyebrow">Как говорят профи</div><p class="p">${esc(t.d)}</p></div>
+ <div class="callout ok"><div class="eyebrow">Скажи клиенту</div><p class="p">«${esc(t.s)}»</p></div>
+ ${t.x?`<div class="callout"><div class="eyebrow">Не путай</div><p class="p">${esc(t.x)}</p></div>`:""}
+ <button class="btn ${k&&k.k?"ghost":""}" onclick="glMark('${esc(t.id).replace(/'/g,"\\'")}')">${k&&k.k?"✓ Знаю (нажми, чтобы вернуть в учёбу)":"Отметить: знаю"}</button></div>`}
+function glMark(id){const o=tkn();o[id]=o[id]||{k:0,n:0};o[id].k=o[id].k?0:1;save();render()}
+function vGl(){
+  if(!GL.length)return `<div class="stack"><div class="top"><h1 class="title">Словарь</h1></div><div class="card empty"><p>Термины появятся здесь совсем скоро.</p></div></div>`;
+  const total=GL.length,open=GL.filter(glOpen),known=open.filter(t=>(tkn()[t.id]||{}).k).length;
+  if(gl.mode==="drill")return vGlDrill();
+  const list=glFilter(),lessons=[...new Set(open.map(t=>t.n))].sort((a,b)=>a-b);
+  return `<div class="stack"><div class="top"><h1 class="title">Словарь профи</h1></div>
+  <div class="card row"><div class="grow"><b>${known} из ${open.length} знаю</b><div class="ls">Открыто терминов: ${open.length} из ${total}. Новые открываются после теста урока.</div></div>
+  ${open.length>=4?`<button class="btn" onclick="glStart()">Тренажёр</button>`:""}</div>
+  <input class="inp" placeholder="Найти термин…" value="${esc(gl.q)}" oninput="gl.q=this.value;glKeep()" style="width:100%;min-height:48px;border-radius:14px;border:2px solid var(--line);padding:0 14px;background:var(--surface);color:var(--fg);font:inherit">
+  ${lessons.length>1?`<div class="row" style="flex-wrap:wrap;gap:6px"><button class="btn ${gl.f?"ghost":""}" style="min-height:36px;padding:0 12px" onclick="gl.f=0;render()">Все</button>${lessons.map(n=>`<button class="btn ${gl.f===n?"":"ghost"}" style="min-height:36px;padding:0 12px" onclick="gl.f=${n};render()">${n}</button>`).join("")}</div>`:""}
+  <div id="gllist">${glList(list)}</div></div>`}
+function glList(list){if(!list.length)return `<div class="card empty"><p>${GL.some(glOpen)?"Ничего не найдено.":"Пройди тест первого урока: термины появятся здесь."}</p></div>`;
+  return list.map(t=>{const k=(tkn()[t.id]||{}).k;return gl.open===t.id?glCard(t)+`<button class="btn ghost" onclick="gl.open=null;render()">Свернуть</button>`:`<button class="card row" style="text-align:left" onclick="gl.open='${esc(t.id).replace(/'/g,"\\'")}';render()"><div class="grow"><b>${esc(t.t)}</b>${t.e?` <span class="ls">${esc(t.e)}</span>`:""}<div class="ls">${esc(t.p.length>90?t.p.slice(0,88)+"…":t.p)}</div></div><span class="ls">${k?"✓":t.n}</span></button>`}).join("")}
+function glKeep(){const el=$("#gllist");if(el)el.innerHTML=glList(glFilter())}
+function glStart(){const open=GL.filter(glOpen),o=tkn();
+  const pool=open.slice().sort((a,b)=>((o[a.id]||{}).k||0)-((o[b.id]||{}).k||0)||Math.random()-.5).slice(0,10);
+  gl.queue=pool.sort(()=>Math.random()-.5);gl.i=0;gl.pick=null;gl.ok=0;gl.mode="drill";glOpts();render()}
+function glOpts(){const t=gl.queue[gl.i];if(!t)return;const open=GL.filter(glOpen).filter(x=>x.id!==t.id).sort(()=>Math.random()-.5).slice(0,3);gl.opts=[t,...open].sort(()=>Math.random()-.5)}
+function glAns(id){if(gl.pick)return;gl.pick=id;const t=gl.queue[gl.i],o=tkn();o[t.id]=o[t.id]||{k:0,n:0};o[t.id].n++;if(id===t.id){gl.ok++;o[t.id].k=1}else o[t.id].k=0;save();render()}
+function glNext(){gl.i++;gl.pick=null;if(gl.i<gl.queue.length)glOpts();render()}
+function vGlDrill(){
+  const q=gl.queue;
+  if(gl.i>=q.length)return `<div class="stack"><div class="top"><h1 class="title">Тренажёр</h1></div><div class="card empty"><div class="disp">${gl.ok} из ${q.length}</div><p>Верно названо терминов. Промахи вернутся в следующий раз.</p></div><button class="btn block" onclick="gl.mode='list';render()">К словарю</button><button class="btn ghost block" onclick="glStart()">Ещё раунд</button></div>`;
+  const t=q[gl.i];
+  return `<div class="stack"><div class="top"><h1 class="title">Тренажёр</h1><button class="btn ghost" style="min-height:36px" onclick="gl.mode='list';render()">Выйти</button></div>
+  <div class="eyebrow">${gl.i+1} из ${q.length} · какой это термин?</div>
+  <div class="card"><p class="p" style="font-size:18px;font-weight:600">${esc(t.p)}</p></div>
+  <div class="opts">${gl.opts.map(o=>`<button class="opt ${gl.pick?(o.id===t.id?"good":o.id===gl.pick?"bad":""):""}" ${gl.pick?"disabled":""} onclick="glAns('${esc(o.id).replace(/'/g,"\\'")}')">${esc(o.t)}${o.e?` · ${esc(o.e)}`:""}</button>`).join("")}</div>
+  ${gl.pick?glCard(t)+`<button class="btn block" onclick="glNext()">${gl.i+1<q.length?"Дальше →":"Итог"}</button>`:""}</div>`}
 let rep={i:0,flip:false,queue:null};
 function vRep(){
   if(!rep.queue)rep.queue=dueCards();
@@ -156,4 +200,4 @@ function vStat(){
 /*__WIDGETS__*/
 /*__PLAYER__*/
 /* ===== BOOT ===== */
-(async()=>{render();await loadIndex();render();if(CFG.url){setSync("","Подключаю таблицу…");pull()}})();
+(async()=>{render();loadGl();await loadIndex();render();if(CFG.url){setSync("","Подключаю таблицу…");pull()}})();

@@ -25,4 +25,17 @@ for f in glob.glob(f'{R}/miniapp/lessons/[0-9]*.json'):
     d=json.load(open(f));av.append(d['n']);cards[str(d['n'])]=d.get('cards',[])
 av.sort()
 json.dump({"available":av,"cards":cards},open(f'{R}/miniapp/lessons/index.json','w'),ensure_ascii=False)
-print('built, lessons:',av)
+import importlib.util
+gl=[];seen=set()
+for f in sorted(glob.glob(f'{R}/tools/terms/T_*.py')):
+    sp=importlib.util.spec_from_file_location(os.path.basename(f)[:-3],f);m=importlib.util.module_from_spec(sp)
+    try: sp.loader.exec_module(m)
+    except Exception as e: print('TERMS ERROR',f,e);continue
+    for n,items in sorted(m.TERMS.items()):
+        for it in items:
+            k=it['t'].strip().lower()
+            if k in seen: continue
+            seen.add(k);gl.append({"id":f"{n}|{it['t']}","n":n,**it})
+gl.sort(key=lambda x:(x['n'],x['t']))
+json.dump(gl,open(f'{R}/miniapp/glossary.json','w'),ensure_ascii=False)
+print('built, lessons:',av,'terms:',len(gl))

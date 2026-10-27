@@ -70,3 +70,12 @@ def lesson(n,pred,body,cl,quiz,review,tp,wr,cards,minutes=(13,6,15)):
 from urllib.parse import quote as _q
 def wiki(title,query): return {"title":title,"sub":"Статья · Википедия","url":"https://ru.wikipedia.org/w/index.php?search="+_q(query)}
 def yt(title,query): return {"title":title,"sub":"Видео · YouTube, поиск по запросу","url":"https://www.youtube.com/results?search_query="+_q(query)}
+
+# ---------- словарь профи ----------
+def term(name, eng, plain, pro, say, trap=""):
+    """name — термин по-русски (как говорят профи); eng — оригинал/аббревиатура ('' если нет);
+    plain — простыми словами с образом/аналогией (2–3 предложения);
+    pro — строгое определение (1–2 предложения, с формулой если есть);
+    say — фраза клиенту (до 25 слов, живой язык);
+    trap — частая путаница/ошибка (1 предложение, можно пусто)."""
+    return {"t":name,"e":eng,"p":plain,"d":pro,"s":say,"x":trap}
