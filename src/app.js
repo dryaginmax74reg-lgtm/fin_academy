@@ -78,14 +78,14 @@ const BOX=[1,3,7,30];
 function avgScore(){const b=CATALOG.map(l=>best(l[0])).filter(x=>x!==null);return b.length?Math.round(b.reduce((a,c)=>a+c,0)/b.length*100)+"%":"—"}
 
 /* ===== SHELL ===== */
-const ICONS={today:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',prog:'<path d="M4 6h16M4 12h16M4 18h10"/>',gl:'<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h11"/>',rep:'<path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/>',stat:'<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>'};
-let tab=(location.hash||"#today").slice(1);if(!["today","prog","gl","rep","stat"].includes(tab))tab="today";
-const TABS=[["today","Сегодня"],["prog","Программа"],["gl","Словарь"],["rep","Повтор"],["stat","Прогресс"]];
+const ICONS={today:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',prog:'<path d="M4 6h16M4 12h16M4 18h10"/>',ar:'<path d="M12 3l2.5 5.5L20 9.3l-4 4 1 5.7-5-2.8L7 19l1-5.7-4-4 5.5-.8z"/>',gl:'<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h11"/>',rep:'<path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/>',stat:'<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>'};
+let tab=(location.hash||"#today").slice(1);if(!["today","prog","gl","ar","rep","stat"].includes(tab))tab="today";
+const TABS=[["today","Сегодня"],["prog","Программа"],["gl","Словарь"],["ar","Арсенал"],["rep","Повтор"],["stat","Прогресс"]];
 function nav(){const due=dueCards().length;
   const h=TABS.map(([k,l])=>`<button class="tab" role="tab" aria-selected="${tab===k}" onclick="go('${k}')"><svg viewBox="0 0 24 24">${ICONS[k]}</svg><span>${l}</span>${k==="rep"&&due?`<em class="dot" style="font-style:normal">${due}</em>`:""}</button>`).join("");
   $("#tabbar").innerHTML=h;$("#rail").innerHTML=`<div class="brand">Fin<b>Lab</b> Academy</div>`+h}
 function go(k){tab=k;try{history.replaceState(null,"","#"+k)}catch(e){}render();window.scrollTo(0,0)}
-function render(){nav();$("#view").innerHTML=({today:vToday,prog:vProg,gl:vGl,rep:vRep,stat:vStat})[tab]()}
+function render(){nav();$("#view").innerHTML=({today:vToday,prog:vProg,gl:vGl,ar:vAr,rep:vRep,stat:vStat})[tab]()}
 
 /* ===== VIEWS ===== */
 function vToday(){
@@ -199,5 +199,6 @@ function vStat(){
 
 /*__WIDGETS__*/
 /*__PLAYER__*/
+/*__ARSENAL__*/
 /* ===== BOOT ===== */
-(async()=>{render();loadGl();await loadIndex();render();if(CFG.url){setSync("","Подключаю таблицу…");pull()}})();
+(async()=>{render();loadGl();loadAr();await loadIndex();render();if(CFG.url){setSync("","Подключаю таблицу…");pull()}})();
