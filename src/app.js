@@ -79,13 +79,14 @@ function avgScore(){const b=CATALOG.map(l=>best(l[0])).filter(x=>x!==null);retur
 
 /* ===== SHELL ===== */
 const ICONS={today:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',prog:'<path d="M4 6h16M4 12h16M4 18h10"/>',ar:'<path d="M12 3l2.5 5.5L20 9.3l-4 4 1 5.7-5-2.8L7 19l1-5.7-4-4 5.5-.8z"/>',gl:'<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h11"/>',rep:'<path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/>',stat:'<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>'};
-let tab=(location.hash||"#today").slice(1);if(!["today","prog","gl","ar","rep","stat"].includes(tab))tab="today";
-const TABS=[["today","Сегодня"],["prog","Программа"],["gl","Словарь"],["ar","Арсенал"],["rep","Повтор"],["stat","Прогресс"]];
+ICONS.exams=ICONS.prog;
+let tab=(location.hash||"#today").slice(1);if(!["today","prog","gl","ar","rep","stat","exams"].includes(tab))tab="today";
+const TABS=[["today","Сегодня"],["prog","Программа"],["gl","Словарь"],["ar","Арсенал"],["rep","Повтор"],["stat","Прогресс"],["exams","Экзамены"]];
 function nav(){const due=dueCards().length;
   const h=TABS.map(([k,l])=>`<button class="tab" role="tab" aria-selected="${tab===k}" onclick="go('${k}')"><svg viewBox="0 0 24 24">${ICONS[k]}</svg><span>${l}</span>${k==="rep"&&due?`<em class="dot" style="font-style:normal">${due}</em>`:""}</button>`).join("");
   $("#tabbar").innerHTML=h;$("#rail").innerHTML=`<div class="brand">Fin<b>Lab</b> Academy</div>`+h}
 function go(k){tab=k;try{history.replaceState(null,"","#"+k)}catch(e){}render();window.scrollTo(0,0)}
-function render(){nav();$("#view").innerHTML=({today:vToday,prog:vProg,gl:vGl,ar:vAr,rep:vRep,stat:vStat})[tab]()}
+function render(){nav();$("#view").innerHTML=({today:vToday,prog:vProg,gl:vGl,ar:vAr,rep:vRep,stat:vStat,exams:vExams})[tab]()}
 
 /* ===== VIEWS ===== */
 function vToday(){
@@ -97,6 +98,7 @@ function vToday(){
   <h1 class="title">${pre?"Завтра начинаем.":s>1?`Серия ${s} дн.`:"Сегодняшний урок"}</h1>
   <div class="hero"><div class="eyebrow">№ ${n} · ${BLOCKS[L[1]]} · ${label}</div><h2>${esc(L[2])}</h2><p>${esc(L[3])}.</p>
   ${ready?`<button class="btn inv" onclick="openLesson(${n})">${taken(n)?"Пройти ещё раз":"Начать урок"} →</button>`:`<button class="btn inv" disabled>Урок готовится</button>`}</div>
+  ${examNotice()}
   ${due?`<button class="card row" onclick="go('rep')" style="text-align:left"><div class="grow"><b>Повторение</b><div class="ls">${due} карточ${due===1?"ка":due<5?"ки":"ек"} ждут. 2 минуты.</div></div><span class="btn ghost" style="min-height:40px;padding:0 16px">Начать</span></button>`:""}
   ${(()=>{const pt=pendingTest();if(!pt)return"";const W=pt[0]==="Недельный",ok=W?rangeReady(pt[1]*5-4,pt[1]*5):rangeReady(1,pt[1]*10);if(!ok)return"";return `<button class="card row" onclick="openTest('${pt[0]}',${pt[1]})" style="text-align:left"><div class="grow"><b>${W?`Тест недели ${pt[1]}`:`Итоговый тест: уроки 1–${pt[1]*10}`}</b><div class="ls">Закрепление пройденного. Можно сегодня или утром в понедельник.</div></div><span class="btn ghost" style="min-height:40px;padding:0 16px">Начать</span></button>`})()}
   <div class="stats"><div class="stat"><b class="num">${done}</b><span>пройдено из 60</span></div><div class="stat"><b class="num">${s}</b><span>дней подряд</span></div><div class="stat"><b class="num">${avgScore()}</b><span>средний балл</span></div></div>
@@ -200,5 +202,6 @@ function vStat(){
 /*__WIDGETS__*/
 /*__PLAYER__*/
 /*__ARSENAL__*/
+/*__EXAMS__*/
 /* ===== BOOT ===== */
 (async()=>{render();loadGl();loadAr();await loadIndex();render();if(CFG.url){setSync("","Подключаю таблицу…");pull()}})();
