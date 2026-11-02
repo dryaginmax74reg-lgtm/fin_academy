@@ -8,6 +8,8 @@
 <title>FinLab Academy</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&display=swap">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <style>
 :root{
   --bg:#F3F4F8; --surface:#FFFFFF; --surface2:#EAECF3; --line:#DDE0EA;
@@ -64,7 +66,7 @@ h1,h2,h3,p{margin:0}
 }
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
 .eyebrow{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--fg3)}
-.title{font-family:var(--display);font-weight:800;font-size:clamp(28px,7vw,38px);letter-spacing:-.03em;line-height:1.05;text-wrap:balance}
+.title{font-family:var(--display);font-weight:800;font-size:clamp(24px,6vw,32px);letter-spacing:-.03em;line-height:1.15;text-wrap:balance}
 .chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border-radius:16px;background:var(--surface);border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--fg2)}
 .chip i{width:8px;height:8px;border-radius:50%;background:var(--fg3);display:inline-block}
 .chip.ok i{background:var(--ok)} .chip.warn i{background:var(--warm)} .chip.bad i{background:var(--bad)}
@@ -201,6 +203,28 @@ table.tbl{border-collapse:collapse;width:100%;font-size:15px;min-width:300px}
 .pfoot .btn{white-space:nowrap}.pfoot .btn.block{white-space:normal}
 button.card.row{width:100%}
 .opt.bad{border-color:var(--bad,#d93a3a);background:var(--bad-soft,#fde8e8)}
+
+/* Reading and application screens keep FINLAB's existing brand. */
+:root{--fg3:#626980;--shadow:none}
+@media(prefers-color-scheme:dark){:root{--fg3:#a9afc6;--shadow:none}}
+.eyebrow,.week h3{letter-spacing:0;text-transform:none;font-size:13px}
+.hero{box-shadow:none}
+.hero .eyebrow{opacity:1}
+.hero h2{font-size:clamp(18px,4.6vw,26px)}
+.tabbar{background:var(--surface);backdrop-filter:none;-webkit-backdrop-filter:none;padding-inline:16px}
+.daily .top{align-items:flex-start;flex-wrap:wrap;gap:16px}
+.daily .title{font-size:26px}
+.daily section{display:grid;gap:12px}
+.daily-heading{font:700 20px/1.35 var(--ui);margin:14px 0 8px}
+.daily-item{padding-left:12px}
+.daily-table{max-width:100%;overflow-x:auto}
+.daily-table table{border-collapse:collapse;width:100%;font-size:16px}
+.daily-table td{padding:10px;text-align:left;border-bottom:1px solid var(--line)}
+.player .formula{max-width:100%;overflow-x:auto}
+.player .read .p{overflow-wrap:anywhere}
+.player .h{overflow-wrap:anywhere}
+@media(max-width:480px){.daily .title{font-size:23px}.daily .top .btn{padding:10px 14px}.daily-heading{font-size:18px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style></head><body>
 <div class="shell"><nav class="rail" id="rail" aria-label="Разделы"></nav><main class="main" id="view"></main></div>
 <nav class="tabbar" id="tabbar" aria-label="Разделы"></nav><div id="layer"></div>
@@ -219,7 +243,8 @@ const nowMsk=()=>new Date().toLocaleString("sv-SE",{timeZone:"Europe/Moscow"});
 const todayMsk=()=>nowMsk().slice(0,10);
 function lessonDate(n){let d=new Date(START+"T12:00:00Z"),c=1;while(c<n){d.setUTCDate(d.getUTCDate()+1);const w=d.getUTCDay();if(w!==0&&w!==6)c++}return d.toISOString().slice(0,10)}
 const fmtD=iso=>new Date(iso+"T12:00:00Z").toLocaleDateString("ru-RU",{day:"numeric",month:"long",weekday:"long",timeZone:"UTC"});
-const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let storageWarning=false;
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){if(!storageWarning){storageWarning=true;toast('Не удалось сохранить данные на устройстве. Скачай резервную копию прогресса.')}return false}}};
 const key=r=>r.slice(0,4).join("|");
 function addDays(iso,k){const d=new Date(iso+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+k);return d.toISOString().slice(0,10)}
 function toast(m){const t=document.createElement("div");t.className="toast pop";t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2600)}
@@ -285,13 +310,13 @@ function avgScore(){const b=CATALOG.map(l=>best(l[0])).filter(x=>x!==null);retur
 
 /* ===== SHELL ===== */
 const ICONS={today:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',prog:'<path d="M4 6h16M4 12h16M4 18h10"/>',ar:'<path d="M12 3l2.5 5.5L20 9.3l-4 4 1 5.7-5-2.8L7 19l1-5.7-4-4 5.5-.8z"/>',gl:'<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h11"/>',rep:'<path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/>',stat:'<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>'};
-let tab=(location.hash||"#today").slice(1);if(!["today","prog","gl","ar","rep","stat"].includes(tab))tab="today";
+let tab=(location.hash||"#today").slice(1);if(!["today","prog","daily","gl","ar","rep","stat"].includes(tab))tab="today";
 const TABS=[["today","Сегодня"],["prog","Программа"],["gl","Словарь"],["ar","Арсенал"],["rep","Повтор"],["stat","Прогресс"]];
 function nav(){const due=dueCards().length;
   const h=TABS.map(([k,l])=>`<button class="tab" role="tab" aria-selected="${tab===k}" onclick="go('${k}')"><svg viewBox="0 0 24 24">${ICONS[k]}</svg><span>${l}</span>${k==="rep"&&due?`<em class="dot" style="font-style:normal">${due}</em>`:""}</button>`).join("");
   $("#tabbar").innerHTML=h;$("#rail").innerHTML=`<div class="brand">Fin<b>Lab</b> Academy</div>`+h}
 function go(k){tab=k;try{history.replaceState(null,"","#"+k)}catch(e){}render();window.scrollTo(0,0)}
-function render(){nav();$("#view").innerHTML=({today:vToday,prog:vProg,gl:vGl,ar:vAr,rep:vRep,stat:vStat})[tab]()}
+function render(){nav();$("#view").innerHTML=({today:vToday,prog:vProg,daily:vDaily,gl:vGl,ar:vAr,rep:vRep,stat:vStat})[tab]()}
 
 /* ===== VIEWS ===== */
 function vToday(){
@@ -301,6 +326,7 @@ function vToday(){
   return `<div class="stack">
   <div class="top"><div class="eyebrow">FinLab Academy</div>${syncChip()}</div>
   <h1 class="title">${pre?"Завтра начинаем.":s>1?`Серия ${s} дн.`:"Сегодняшний урок"}</h1>
+  <button class="card row" onclick="go('daily')" style="text-align:left"><span class="grow"><b>Ежедневная учёба</b><br><span class="ls">Занятия из чата, недельные и месячные экзамены</span></span><span aria-hidden="true">→</span></button>
   <div class="hero"><div class="eyebrow">№ ${n} · ${BLOCKS[L[1]]} · ${label}</div><h2>${esc(L[2])}</h2><p>${esc(L[3])}.</p>
   ${ready?`<button class="btn inv" onclick="openLesson(${n})">${taken(n)?"Пройти ещё раз":"Начать урок"} →</button>`:`<button class="btn inv" disabled>Урок готовится</button>`}</div>
   ${due?`<button class="card row" onclick="go('rep')" style="text-align:left"><div class="grow"><b>Повторение</b><div class="ls">${due} карточ${due===1?"ка":due<5?"ки":"ек"} ждут. 2 минуты.</div></div><span class="btn ghost" style="min-height:40px;padding:0 16px">Начать</span></button>`:""}
@@ -309,7 +335,7 @@ function vToday(){
   <div class="card"><div class="eyebrow">История-крючок</div><p style="margin-top:6px;font-weight:600">${esc(L[4])}</p></div></div>`;
 }
 function vProg(){
-  const nx=nextLesson();let h=`<div class="stack"><div class="top"><h1 class="title">Программа</h1>${syncChip()}</div>`;
+  const nx=nextLesson();let h=`<div class="stack"><div class="top"><h1 class="title">Программа</h1>${syncChip()}</div><button class="lrow" onclick="go('daily')"><span class="grow"><b>Ежедневная учёба</b><br><span class="ls">Отдельный порядок занятий из чата · внутри FINLAB</span></span><span aria-hidden="true">→</span></button>`;
   for(let w=0;w<12;w++){
     h+=`<section class="week"><h3>Неделя ${w+1} · ${WEEKS[w]}</h3>`;
     for(let i=1;i<=5;i++){
@@ -406,12 +432,12 @@ function vStat(){
 /* ===== WIDGETS: общий движок заданий (для шагов-игр, тестов урока и тестов недели) ===== */
 let WS={},REG={};
 const wk=k=>WS[k]||(WS[k]={});
-const T=s=>String(s??"").replace(/&(?!amp;|lt;|gt;|#|nbsp;)/g,"&amp;").replace(/<(?!\/?(b|i|em|sup|sub|br)\b)/g,"&lt;");
+const T=s=>String(s??"").replace(/&(?!amp;|lt;|gt;|#|nbsp;)/g,"&amp;").replace(/<[^>]*>/g,t=>/^<\/?(?:b|i|em|sup|sub|br)\s*\/?\s*>$/i.test(t)?t:esc(t)).replace(/<(?!\/?(?:b|i|em|sup|sub|br)\b)/g,"&lt;");
 function rng(seed){let h=1779033703^seed.length;for(let i=0;i<seed.length;i++){h=Math.imul(h^seed.charCodeAt(i),3432918353);h=h<<13|h>>>19}let a=h>>>0;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 const shuf=(arr,r)=>{const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 const fbk=(tone,title,text)=>`<div class="callout ${tone} pop"><div class="eyebrow">${title}</div><p class="p">${T(text)}</p></div>`;
 const toneOf=s=>s>=.99?"ok":s>0?"warm":"bad";
-function wact(key,act,v){const it=REG[key];if(!it)return;WA[it.k](it,wk(key),act,v,key);redrawKeep()}
+function wact(key,act,v){const it=REG[key];if(!it||P?.review||wdraw(it,key).done)return;WA[it.k](it,wk(key),act,v,key);redrawKeep()}
 function wdraw(it,key){REG[key]=it;return WD[it.k](it,wk(key),key)}
 function wscore(it,key){return wdraw(it,key).score||0}
 const WD={
@@ -450,7 +476,7 @@ const WD={
 const WA={
  choice:(it,st,a,v)=>{if(st.a===undefined)st.a=v},
  case:(it,st,a,v)=>{if(st.a===undefined)st.a=v},
- num:(it,st,a,v,key)=>{const x=parseFloat(String(document.getElementById("ni_"+key).value).replace(",","."));if(isNaN(x)){toast("Введи число");return}st.a=x},
+ num:(it,st,a,v,key)=>{const x=parseFloat(String(document.getElementById("ni_"+key).value).replace(",","."));if(!Number.isFinite(x)){toast("Введи конечное число");return}st.a=x},
  tf:(it,st,a,v)=>{const[i,b]=v;st.a=st.a||[];if(st.a[i]===undefined)st.a[i]=b},
  pick:(it,st,a,v)=>{if(a==="tog"){st.sel=st.sel||[];const k=st.sel.indexOf(v);k>=0?st.sel.splice(k,1):st.sel.push(v)}else st.chk=true},
  match:(it,st,a,v)=>{if(a==="l"){st.sel=v;st.flash=undefined}else if(st.sel!==null&&st.sel!==undefined){if(v===st.sel){st.lock.push(v);st.sel=null;st.flash=undefined}else{st.err++;st.flash=v}}else toast("Сначала выбери карточку слева")},
@@ -467,18 +493,21 @@ async function openLesson(n){
   try{const D=await loadLesson(n);WS={};REG={};P={n,D,i:0,t0:Date.now(),pick:{},q:{i:0,done:false,res:null}};drawPlayer()}
   catch(e){toast("Не удалось загрузить урок. Проверь интернет.")}
 }
-function closeLesson(){P=null;WS={};REG={};$("#layer").innerHTML="";document.body.style.overflow="";render()}
+function closeLesson(){saveDailyDraft();P=null;WS={};REG={};$("#layer").innerHTML="";document.body.style.overflow="";window.Telegram?.WebApp?.BackButton?.hide();render()}
 function redrawKeep(){keepNext=true;drawPlayer()}
 function drawPlayer(){
   const D=P.D,st=D.steps[P.i],body=STEPS[st.t](st),last=P.i===D.steps.length-1;
   const pb0=$("#pbody"),sc=pb0?pb0.scrollTop:0;
-  const hdr=P.n?`Урок ${P.n} · ${BLOCKS[CATALOG[P.n-1][1]]}`:P.hdr;
+  const hdr=P.daily?(P.n?`Ежедневная учёба · занятие ${P.n}`:P.hdr):P.n?`Урок ${P.n} · ${BLOCKS[CATALOG[P.n-1][1]]}`:P.hdr;
   $("#layer").innerHTML=`<div class="player ${P.shown?"":"enter"}" role="dialog" aria-label="${esc(hdr)}">
    <div class="phead"><div class="row"><button class="x" onclick="closeLesson()" aria-label="Закрыть">✕</button><div class="grow"><div class="eyebrow">${esc(hdr)}</div></div><span class="ls num">${P.i+1}/${D.steps.length}</span></div>
    <div class="seg">${D.steps.map((_,k)=>`<i class="${k<=P.i?"on":""}"></i>`).join("")}</div></div>
    <div class="pbody" id="pbody"><div class="pin">${body.html}</div></div>
    <div class="pfoot"><div class="in">${P.i>0&&!body.noback?`<button class="btn ghost" onclick="stepTo(-1)" aria-label="Назад">←</button>`:""}${body.foot||`<button class="btn block" onclick="${last?"closeLesson()":"stepTo(1)"}">${last?"Готово":"Дальше"}</button>`}</div></div></div>`;
   P.shown=true;document.body.style.overflow="hidden";const pb=$("#pbody");if(pb)pb.scrollTop=keepNext?sc:0;keepNext=false;
+  if(P.daily&&!P.q.done)saveDailyDraft();
+  window.Telegram?.WebApp?.BackButton?.show();
+  window.MathJax?.typesetPromise?.([$("#layer")]).catch(()=>{});
 }
 function stepTo(d){P.i=Math.max(0,Math.min(P.D.steps.length-1,P.i+d));drawPlayer()}
 function readIdx(st){const rs=P.D.steps.filter(s=>s.t==="read");return [rs.indexOf(st)+1,rs.length]}
@@ -511,7 +540,7 @@ const STEPS={
  play(st){
   const g=wk("p"+P.i);g.i=g.i||0;const items=st.items,n=items.length,it=items[g.i],key=`p${P.i}.${g.i}`,w=wdraw(it,key),lastItem=g.i===n-1;
   let foot=w.foot;
-  if(!foot)foot=w.done?(lastItem?`<button class="btn block" onclick="stepTo(1)">Дальше</button>`:`<button class="btn block" onclick="playNext()">Следующее задание</button>`):`<button class="btn block" disabled>Выполни задание</button>`;
+  if(!foot)foot=w.done?(lastItem?`<button class="btn block" onclick="${P.i===P.D.steps.length-1?'closeLesson()':'stepTo(1)'}">${P.i===P.D.steps.length-1?'Готово':'Дальше'}</button>`:`<button class="btn block" onclick="playNext()">Следующее задание</button>`):`<button class="btn block" disabled>Выполни задание</button>`;
   return {html:`<div class="kicker">${esc(st.kicker||"Задание")}${n>1?` · ${g.i+1} из ${n}`:""}</div><h1 class="h">${esc(st.title)}</h1>${st.intro&&g.i===0?`<div class="p">${st.intro}</div>`:""}${it.q?`<div class="qq">${T(it.q)}</div>`:""}${w.html}${w.done&&lastItem&&st.outro?`<div class="callout ok pop"><div class="eyebrow">Что из этого следует</div><div class="p">${st.outro}</div></div>`:""}`,foot};
  },
  story(st){
@@ -544,7 +573,7 @@ const STEPS={
    ${r?`<div class="card row"><div class="big num">${Math.round(r.pct*100)}%</div><div class="grow"><b>${f1(r.score,2)} из ${r.max}</b><div class="ls">Порог перехода — 70%</div></div></div>`:`<div class="callout warm">Пройди тест, чтобы результат записался.</div>`}
    <div class="callout"><div class="eyebrow">Что ты теперь умеешь</div><p class="p">${esc(st.can)}</p></div>
    <div class="eyebrow">Углубиться</div><div class="links">${(st.links||[]).map(l=>l.url?`<a href="${esc(l.url)}" target="_blank" rel="noopener"><b>${esc(l.title)}</b><span>${esc(l.sub||"")}</span></a>`:`<div class="mini" style="margin-bottom:8px"><span>${esc(l.kind||"Книга")}</span><b style="font-family:var(--ui);font-size:16px">${esc(l.title)}</b></div>`).join("")}</div>
-   <button class="callout" style="text-align:left;width:100%" onclick="closeLesson();gl.f=${P.n};gl.mode='list';go('gl')"><div class="eyebrow">Словарь профи</div><p class="p"><b>Термины урока</b> — как они звучат у профессионалов и как объяснить их клиенту. Открыть →</p></button>
+   <button class="callout" style="text-align:left;width:100%" onclick="gl.f=${P.n};gl.mode='list';closeLesson();go('gl')"><div class="eyebrow">Словарь профи</div><p class="p"><b>Термины урока</b> — как они звучат у профессионалов и как объяснить их клиенту. Открыть →</p></button>
    <div class="callout ok"><div class="eyebrow">Карточки</div><p class="p">${(INDEX.cards[P.n]||[]).length} карточек придут во вкладку «Повтор» завтра.</p></div>`};
  },
  twrap(){const r=P.q.res,miss=r?r.miss:[];
@@ -555,8 +584,11 @@ const STEPS={
 };
 function nextQ(){
   const Q=P.D.quiz;
+  if(P.q.done)return;
+  if(!wdraw(Q[P.q.i],'q'+P.q.i).done){toast('Сначала ответь на вопрос');return}
   if(P.q.i<Q.length-1){P.q.i++;drawPlayer();return}
   const per=Q.map((it,i)=>wscore(it,"q"+i));let score=Math.round(per.reduce((a,b)=>a+b,0)*100)/100;
+  if(P.daily){dailyFinish(per);return}
   const sec=Math.round((Date.now()-P.t0)/1000);
   const miss=P.test?[...new Set(Q.filter((it,i)=>per[i]<.7).map(it=>it.from))].sort((a,b)=>a-b):[];
   P.q.res={score,max:Q.length,pct:score/Q.length,miss};P.q.done=true;
@@ -600,7 +632,7 @@ async function loadAr(){
   }
   if(tab==="ar")render();
 }
-const ar={v:"home",sf:0,sw:"",sq:"",so:null,rq:"",rg:"",ro:null,rv:{},co:null,cw:{},cres:null};
+const ar={v:"home",sf:0,sw:"",sq:"",region:"",so:null,rq:"",rg:"",ro:null,rv:{},co:null,cw:{},cres:null};
 const arBack=`<button class="btn ghost" style="min-height:36px" onclick="ar.v='home';render();window.scrollTo(0,0)">← Арсенал</button>`;
 const chip=(on,label,fn)=>`<button class="btn ${on?"":"ghost"}" style="min-height:36px;padding:0 12px" onclick="${fn}">${label}</button>`;
 const inpCss="width:100%;min-height:48px;border-radius:14px;border:2px solid var(--line);padding:0 14px;background:var(--surface);color:var(--fg);font:inherit";
@@ -609,7 +641,7 @@ function vAr(){
   if(ar.v==="calc")return vCalc();
   if(ar.v==="sc")return vSc();
   const ok=Object.values(S.scen||{}).filter(x=>x.done).length;
-  const items=ST.filter(s=>taken(s.n)).length;
+  const items=ST.filter(s=>s.open||taken(s.n)).length;
   return `<div class="stack"><div class="top"><h1 class="title">Арсенал</h1></div>
   <p class="p ls">То, что пригодится на встрече: истории, правила «в уме» и тренировка на разных клиентах.</p>
   <button class="card row" style="text-align:left" onclick="ar.v='st';render();window.scrollTo(0,0)"><div class="grow"><b>Библиотека историй</b><div class="ls">Кейсы и факты «для пощеголять». Открыто ${items} из ${ST.length}: истории урока открываются после его теста.</div></div><span>›</span></button>
@@ -618,16 +650,18 @@ function vAr(){
 }
 /* --- истории --- */
 const WHO={cons:"Консервативному",biz:"Предпринимателю",risk:"Азартному"};
-function stFilter(){const q=ar.sq.trim().toLowerCase();return ST.filter(s=>taken(s.n)&&(!ar.sf||s.g===ar.sf)&&(!ar.sw||(s.w||[]).includes(ar.sw))&&(!q||(s.t+" "+s.x).toLowerCase().includes(q)))}
+function stFilter(){const q=ar.sq.trim().toLowerCase();return ST.filter(s=>(s.open||taken(s.n))&&(!ar.region||s.region===ar.region)&&(!ar.sf||s.g===ar.sf)&&(!ar.sw||(s.w||[]).includes(ar.sw))&&(!q||(s.t+" "+s.x).toLowerCase().includes(q)))}
 function stList(l){if(!l.length)return `<div class="card empty"><p>${ST.some(s=>taken(s.n))?"Ничего не найдено.":"Пройди тест первого урока: его истории появятся здесь."}</p></div>`;
-  return l.map(s=>ar.so===s.id?`<div class="card stack pop" style="gap:10px"><div class="eyebrow">${esc(s.k)} · урок ${s.n} · ${esc(BLOCKS[s.g]||"")}</div><h2 class="disp" style="margin:0">${esc(s.t)}</h2><div class="rd">${s.h}</div>
-   <div class="ls">${(s.w||[]).map(w=>"Подойдёт: "+WHO[w]).join(" · ")}</div><div class="row" style="gap:8px"><button class="btn ghost" onclick="ar.so=null;render()">Свернуть</button>${(INDEX.available||[]).includes(s.n)?`<button class="btn ghost" onclick="openLesson(${s.n})">Урок ${s.n}</button>`:""}</div></div>`
-   :`<button class="card row" style="text-align:left" onclick="ar.so='${s.id}';render()"><div class="grow"><b>${esc(s.t)}</b><div class="ls">${esc(s.k)} · урок ${s.n}</div></div><span>›</span></button>`).join("")}
+  return l.map(s=>ar.so===s.id?`<div class="card stack pop" style="gap:10px"><div class="eyebrow">${esc(s.k)} · ${s.open?"ежедневное занятие":"урок"} ${s.n} · ${esc(BLOCKS[s.g]||"")}</div><h2 class="disp" style="margin:0">${esc(s.t)}</h2><div class="rd">${s.h}</div>
+   <div class="ls">${(s.w||[]).map(w=>"Подойдёт: "+WHO[w]).join(" · ")}</div><div class="row" style="gap:8px"><button class="btn ghost" onclick="ar.so=null;render()">Свернуть</button>${(INDEX.available||[]).includes(s.n)?`<button class="btn ghost" onclick="${s.open?"openDaily":"openLesson"}(${s.n})">${s.open?"Занятие":"Урок"} ${s.n}</button>`:""}</div></div>`
+   :`<button class="card row" style="text-align:left" onclick="ar.so='${s.id}';render()"><div class="grow"><b>${esc(s.t)}</b><div class="ls">${esc(s.k)} · ${s.open?"ежедневное занятие":"урок"} ${s.n}</div></div><span>›</span></button>`).join("")}
 function stKeep(){const el=$("#stlist");if(el)el.innerHTML=stList(stFilter())}
 function vSt(){
-  const open=ST.filter(s=>taken(s.n)),bl=[...new Set(open.map(s=>s.g))];
+  const open=ST.filter(s=>s.open||taken(s.n)),bl=[...new Set(open.map(s=>s.g))];
   return `<div class="stack"><div class="top"><h1 class="title">Истории</h1>${arBack}</div>
   <div class="ls">Открыто ${open.length} из ${ST.length}. Выбери историю, прочитай и перескажи клиенту своими словами.</div>
+  <p class="ls">Подборки РФ и США показывают новые истории с проверенными источниками. Остальные истории доступны во вкладке «Все страны».</p>
+  <div class="row" style="flex-wrap:wrap;gap:6px">${['','РФ','США'].map(r=>chip(ar.region===r,r||'Все страны',`ar.region='${r}';render()`)).join('')}</div>
   <input placeholder="Найти историю…" value="${esc(ar.sq)}" oninput="ar.sq=this.value;stKeep()" style="${inpCss}">
   <div class="row" style="flex-wrap:wrap;gap:6px">${chip(!ar.sf,"Все темы","ar.sf=0;render()")}${bl.map(b=>chip(ar.sf===b,BLOCKS[b],`ar.sf='${b}';render()`)).join("")}</div>
   <div class="row" style="flex-wrap:wrap;gap:6px">${chip(!ar.sw,"Любому клиенту","ar.sw='';render()")}${Object.entries(WHO).map(([k,l])=>chip(ar.sw===k,l,`ar.sw='${k}';render()`)).join("")}</div>
@@ -700,6 +734,93 @@ function vSc(){
   return `<div class="stack"><div class="top"><h1 class="title">Клиенты</h1>${arBack}</div><div class="ls">У каждого свои цели, страхи и ограничения. Соберите портфель, который им подходит.</div>
   ${SC.clients.map(c=>{const s=(S.scen||{})[c.id]||{};return `<button class="card row" style="text-align:left" onclick="scOpen('${c.id}')"><div class="grow"><b>${esc(c.name)}, ${c.age}</b><div class="ls">${esc(c.fact)}</div></div><span>${s.done?"✓":"›"}</span></button>`}).join("")}</div>`}
 
+/* Ежедневная учёба внутри FINLAB. Existing course and event identifiers stay independent. */
+let DAILY={lessons:[],planned:30},dailyCache={},dailyBusy=false;
+const CASES=[{"id": "ru-rate-2022", "region": "РФ", "n": 4, "title": "Ставка 20%: новый вклад и старая облигация", "fact": "28 февраля 2022 года Банк России повысил ключевую ставку до 20% годовых. Регулятор связывал решение с девальвационными и инфляционными рисками.", "mechanism": "Учебный вывод: при повышении требуемых доходностей прежний фиксированный купон становится менее привлекательным; цена облигации может снизиться. Вклад и торгуемая облигация по-разному реагируют на изменение ставок.", "limit": "Из решения по ключевой ставке нельзя вывести точное изменение цены конкретной бумаги. Нужны её денежные потоки, рыночная доходность и дюрация.", "client": "Если деньги потребуются раньше погашения, какую потерю при продаже вы готовы выдержать?", "url": "https://www.cbr.ru/press/pr/?file=28022022_094500key.htm", "source": "Банк России, 28.02.2022", "question": {"k": "choice", "q": "Почему повышение ставок может ухудшить результат владельца старой облигации при досрочной продаже?", "opts": ["Новые ставки повышают требуемую доходность и могут снизить цену старых фиксированных потоков", "Ключевая ставка автоматически меняет любой фиксированный купон", "Любая облигация немедленно становится дефолтной"], "ans": 0, "why": "Процентный риск отличается от кредитного: даже при неизменном обещанном купоне рыночная цена меняется."}}, {"id": "ru-market-2022", "region": "РФ", "n": 7, "title": "Биржа закрыта: ликвидность нельзя хранить только в котировках", "fact": "28 февраля 2022 года на Московской бирже не проводились торги на фондовом и срочном рынках и рынке стандартизированных производных инструментов.", "mechanism": "Учебный вывод: наличие ценной бумаги и вчерашней цены не гарантирует возможность продать её к дате семейного платежа. Резерв ликвидности проверяют по доступности денег, а не только по стоимости портфеля.", "limit": "Это конкретные сегменты и дата: из факта нельзя заключать, что одновременно перестали работать все рынки и банковские счета.", "client": "Из каких уже доступных средств семья оплатит ближайшие расходы, если продать активы временно нельзя?", "url": "https://www.moex.com/n43241?nt=112", "source": "Московская биржа, 28.02.2022", "question": {"k": "choice", "q": "Что показала приостановка торгов для планирования семейного резерва?", "opts": ["Рыночная стоимость и доступность денег к сроку — разные характеристики", "Количество акций гарантирует ликвидность", "Стоп-приказ гарантирует продажу даже без торгов"], "ans": 0, "why": "Нужны запас доступных средств и стресс-сценарий временной невозможности продажи."}}, {"id": "ru-gko-1998", "region": "РФ", "n": 10, "title": "Август 1998-го: государственный риск на балансе банка", "fact": "В выступлении о результатах 1998 года Банк России назвал приостановление выплат по ГКО–ОФЗ и последующую девальвацию непосредственным толчком к обострению банковского кризиса.", "mechanism": "Учебный вывод: если банки и их клиенты зависят от одного государственного и валютного фактора, разделение денег между несколькими организациями может оказаться слабой защитой.", "limit": "Современные ОФЗ нельзя механически приравнивать к ГКО 1998 года. Нужно сравнивать бюджет, сроки долга, состав держателей, режим курса и инструменты политики.", "client": "Что объединяет риски ваших банков, облигаций, бизнеса и валютных обязательств?", "url": "https://www.cbr.ru/Queries/XsltBlock/File/103662?fileId=1755", "source": "Банк России, выступление В. Геращенко, 1999", "question": {"k": "choice", "q": "Почему несколько банков не гарантировали независимость рисков в кризисе 1998 года?", "opts": ["У банков могли быть общие государственные и валютные экспозиции", "Любые банки всегда идентичны", "Разные юридические лица исключают совместные убытки"], "ans": 0, "why": "Юридическое разделение посредников не устраняет общий экономический источник потерь."}}, {"id": "ru-ruble-2022", "region": "РФ", "n": 12, "title": "Рубль укрепляется, импорт сжимается", "fact": "Банк России связывает укрепление рубля со второй половины марта 2022 года в значительной степени с сокращением импорта и снижением спроса импортёров на валюту; одновременно действовали ограничения движения капитала.", "mechanism": "Учебный вывод: крепкий курс сам по себе не доказывает ускорение экономики. Сначала анализируют предложение и спрос на валюту, расчёты и ограничения.", "limit": "Причины движения курса меняются во времени. Этот эпизод не является правилом «санкции всегда укрепляют валюту» или прогнозом курса.", "client": "Какая валюта нужна для ваших расходов и остаются ли доступными необходимые расчёты?", "url": "https://www.cbr.ru/Reception/TopicalMessage/Page/2643", "source": "Банк России, разъяснение о первой половине 2022 года", "question": {"k": "choice", "q": "Какое объяснение укрепления рубля весной 2022 года корректнее?", "opts": ["Падение спроса на валюту из-за сокращения импорта вместе с ограничениями капитала", "Укрепление всегда означает рост благосостояния", "Один только торговый профицит гарантирует любой курс"], "ans": 0, "why": "Нужен разбор конкретных потоков и ограничений; курс не заменяет показатели благосостояния."}}, {"id": "us-svb-2023", "region": "США", "n": 4, "title": "SVB: качественные бумаги, неудачный срок денег", "fact": "В обзоре ФРС за 2023 год отмечены слабое управление процентным риском SVB и уязвимость банка к росту ставок. Банк обанкротился в марте 2023 года.", "mechanism": "Учебный вывод: долгосрочные активы и обязательства, которые могут потребовать вернуть быстро, создают риск ликвидности. Качество эмитента облигаций не отменяет риск изменения их цены.", "limit": "Банковский баланс отличается от личного портфеля: у банка есть вкладчики, регулирование и возможность массового оттока. Аналогия переносит механизм, а не все детали.", "client": "На какой срок реально размещены активы и насколько быстро могут понадобиться деньги?", "url": "https://www.federalreserve.gov/publications/2023-april-svb-executive-summary.htm", "source": "ФРС, обзор SVB, апрель 2023", "question": {"k": "choice", "q": "Что объединяет риск длинной облигации и необходимость быстро получить деньги?", "opts": ["Несовпадение сроков активов и обязательств может заставить фиксировать убыток", "Надёжный эмитент исключает любые потери", "Дюрация показывает только риск дефолта"], "ans": 0, "why": "При росте ставок цена длинных фиксированных потоков чувствительна; срочная продажа может превратить переоценку в реализованный убыток."}}, {"id": "us-gme-2021", "region": "США", "n": 5, "title": "GameStop: история цены и история бизнеса", "fact": "В отчёте SEC о событиях начала 2021 года рассмотрены торги GameStop, короткие позиции, активность участников и работа рыночной инфраструктуры.", "mechanism": "Учебный вывод: резкое движение котировок нужно разбирать по нескольким каналам. Рыночная цена в момент ажиотажа и оценка будущих денежных потоков компании отвечают на разные вопросы.", "limit": "Нельзя свести всю динамику к одному короткому сжатию или утверждать, что регулятор гарантировал какую-либо справедливую цену.", "client": "На чём основана ваша цена покупки: на денежных потоках, сравнении компаний или ожидании следующего покупателя?", "url": "https://www.sec.gov/files/staff-report-equity-options-market-struction-conditions-early-2021.pdf", "source": "SEC, отчёт персонала, октябрь 2021", "question": {"k": "choice", "q": "Какой вопрос отделяет оценку бизнеса от ставки на ажиотаж?", "opts": ["Какие денежные потоки и допущения обосновывают цену?", "Сколько знакомых уже купили?", "Насколько быстро цена выросла вчера?"], "ans": 0, "why": "Оценка требует явных допущений о бизнесе, ставке дисконтирования и рисках."}}];
+function caseHTML(c){return `<p class="ls">${esc(c.region)} · исторический кейс</p><h2 class="daily-heading">Что произошло</h2><p class="p">${esc(c.fact)}</p><h2 class="daily-heading">Как работает механизм</h2><p class="p">${esc(c.mechanism)}</p><h2 class="daily-heading">Где аналогия заканчивается</h2><p class="p">${esc(c.limit)}</p><div class="callout"><b>Вопрос клиенту</b><p class="p">${esc(c.client)}</p></div><p class="ls"><a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.source)}</a></p>`}
+function openCase(id){const c=CASES.find(c=>c.id===id);if(!c)return;WS={};REG={};P={n:null,hdr:c.region+' · история',i:0,D:{steps:[{t:'read',title:c.title,min:2,html:caseHTML(c)},{t:'play',title:'Проверь вывод',items:[c.question]}]},pick:{},q:{done:false}};drawPlayer()}
+const dailyEvents=()=>S.events.filter(r=>r[1]==='Ежедневный');
+const dailyTaken=n=>dailyEvents().some(r=>+r[2]===n);
+const dailyBest=n=>{const rows=dailyEvents().filter(r=>+r[2]===n);return rows.length?Math.max(...rows.map(r=>r[4]/r[5])):null};
+async function loadDaily(){try{const r=await fetch('daily/index.json',{cache:'no-cache'});if(!r.ok)throw Error();DAILY=await r.json();render()}catch(e){toast('Не удалось загрузить ежедневную программу. Обнови страницу.')}}
+async function dailyLesson(n){if(dailyCache[n])return dailyCache[n];const r=await fetch(`daily/${n}.json`,{cache:'no-cache'});if(!r.ok)throw Error();const d=await r.json();const cases=CASES.filter(c=>c.n===n);d.steps.push(...cases.map(c=>({t:'read',title:c.title,min:2,html:caseHTML(c)})));d.quiz.push(...cases.map(c=>c.question));return dailyCache[n]=d}
+function dailyPeriod(type,date=todayMsk()){
+  const d=new Date(date+'T12:00:00Z');
+  if(type==='week'){d.setUTCDate(d.getUTCDate()-d.getUTCDay());return d.toISOString().slice(0,10)}
+  const last=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0,12));
+  if(date===last.toISOString().slice(0,10))return date;
+  return new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),0,12)).toISOString().slice(0,10);
+}
+function dailyEligible(cutoff){return DAILY.lessons.filter(l=>dailyEvents().some(r=>+r[2]===l.n&&String(r[0]).slice(0,10)<=cutoff)).map(l=>l.n)}
+function dailyDraftKey(){return P?.daily?(P.daily.kind==='lesson'?'lesson-'+P.n:P.daily.kind+'-'+P.daily.cutoff):null}
+function saveDailyDraft(){const k=dailyDraftKey();if(!k||P.q.done)return;S.dailyDrafts=S.dailyDrafts||{};S.dailyDrafts[k]={P:JSON.parse(JSON.stringify(P)),WS:JSON.parse(JSON.stringify(WS)),saved:nowMsk()};save()}
+function dailySession(data,key){
+  const draft=S.dailyDrafts?.[key];WS={};REG={};
+  if(draft&&!draft.P.q.done){P=draft.P;WS=draft.WS;P.shown=false;toast('Продолжаем с сохранённого места')}
+  else P=data;
+  drawPlayer();
+}
+async function openDaily(n){
+  if(dailyBusy)return;dailyBusy=true;
+  try{const d=await dailyLesson(n);const body=JSON.parse(JSON.stringify(d));
+    body.steps=[{t:'dailyintro'},...body.steps,{t:'quiz'},{t:'dailywrap'}];
+    dailySession({n,D:body,daily:{kind:'lesson',title:d.title},i:0,t0:Date.now(),pick:{},q:{i:0,done:false,res:null}},'lesson-'+n);
+  }catch(e){toast('Не удалось открыть занятие. Проверь соединение.')}finally{dailyBusy=false}
+}
+async function openDailyExam(kind,cutoff=dailyPeriod(kind)){
+  if(dailyBusy)return;dailyBusy=true;
+  try{
+    const from=dailyEligible(cutoff);if(!from.length){toast('Сначала пройди тест урока до даты экзамена');return}
+    const type=kind==='week'?'Недельный ежедневный':'Месячный ежедневный';
+    const attempt=S.events.filter(r=>r[1]===type&&r[2]===cutoff).length;
+    const random=rng(kind+cutoff+'#'+attempt),items=[];
+    for(const n of from){const d=await dailyLesson(n);const pool=(d.review||[]).concat(d.quiz).filter(q=>q.k!=='open');
+      items.push(...shuf(pool,random).slice(0,kind==='week'?2:3).map(q=>({...q,from:n,hint:undefined})))
+    }
+    const title=(kind==='week'?'Недельный экзамен':'Месячный экзамен')+' · '+fmtD(cutoff);
+    const quiz=shuf(items,random);if(!quiz.length)throw Error('Empty exam');
+    dailySession({n:null,hdr:title,daily:{kind,cutoff,from,type,title},D:{title,quiz,steps:[{t:'dailyintro'},{t:'quiz'},{t:'dailywrap'}]},i:0,t0:Date.now(),pick:{},q:{i:0,done:false,res:null}},kind+'-'+cutoff);
+  }catch(e){toast('Не удалось собрать экзамен. Попробуй снова.')}finally{dailyBusy=false}
+}
+function dailyFinish(per){
+  const score=Math.round(per.reduce((a,b)=>a+b,0)*100)/100,max=per.length;
+  const miss=[...new Set(P.D.quiz.filter((q,i)=>per[i]<.7).map(q=>q.from||P.n))];
+  P.q={...P.q,done:true,res:{score,max,pct:score/max,miss}};
+  const type=P.daily.kind==='lesson'?'Ежедневный':P.daily.type,id=P.n||P.daily.cutoff;
+  // Persist review and summary together before attempting optional remote sync.
+  S.dailyHistory=S.dailyHistory||[];
+  S.dailyHistory.push({at:nowMsk(),type,id,title:P.daily.title,from:P.daily.from||[P.n],result:P.q.res,answers:P.D.quiz.map((q,i)=>({question:q,state:JSON.parse(JSON.stringify(wk('q'+i))),score:per[i]}))});
+  const row=[nowMsk(),type,id,P.daily.title,score,max,Math.round((Date.now()-P.t0)/1000)];S.events.push(row);
+  delete (S.dailyDrafts||{})[dailyDraftKey()];P.i=P.D.steps.length-1;save();flush();drawPlayer();
+}
+STEPS.dailyintro=()=>({html:`<h1 class="h">${esc(P.D.title)}</h1>${P.daily.kind==='lesson'?`<p class="ls">${esc(P.D.provenance)}</p><p class="p">Материал, затем ${P.D.quiz.length} заданий. Порог — 70%. Разбор появляется после ответа; закрытый урок можно продолжить с сохранённого места.</p>`:`<p class="p">Накопительный экзамен по ${P.daily.from.length} изученным темам: ${P.daily.from.join(', ')}. Учитываются только тесты, пройденные до ${fmtD(P.daily.cutoff)} включительно.</p><p class="p">${P.D.quiz.length} заданий, порог — 70%. После каждого ответа — разбор, в конце — темы для повторения.</p>`}`,noback:true});
+STEPS.dailywrap=()=>{const r=P.q.res;return {html:`<h1 class="h">${r?.pct>=.7?'Зачёт':'Нужно повторить'}</h1><div class="card"><p class="disp num">${r?Math.round(r.pct*100)+'%':'—'}</p><p class="p">${r?f1(r.score,2)+' из '+r.max:''}. Результат сохранён.</p></div>${r?.miss.length?`<h2 class="daily-heading">Повторить темы</h2>${r.miss.map(n=>`<button class="lrow" onclick="closeLesson();openDaily(${n})"><span class="lnum">${n}</span><span class="grow">${esc(DAILY.lessons.find(l=>l.n===n)?.title||'Урок '+n)}</span></button>`).join('')}`:'<p class="p">Все вопросы решены верно.</p>'}<p class="ls">История ответов и разбор доступны в ежедневной программе. Новая попытка сохраняется отдельно.</p>`,noback:true}};
+function dailyExamRow(kind){const cutoff=dailyPeriod(kind),ready=dailyEligible(cutoff),type=kind==='week'?'Недельный ежедневный':'Месячный ежедневный';const rows=S.events.filter(r=>r[1]===type&&r[2]===cutoff),last=rows.at(-1);return `<button class="lrow trow" ${ready.length?`onclick="openDailyExam('${kind}')"`:'disabled'}><span class="grow"><b>${kind==='week'?'Недельный':'Месячный'} экзамен</b><br><span class="ls">На ${fmtD(cutoff)} · ${ready.length} изученных тем${last?' · последняя оценка '+Math.round(last[4]/last[5]*100)+'%':''}</span></span></button>`}
+function vDaily(){const next=DAILY.lessons.find(l=>(dailyBest(l.n)??0)<.7),history=S.dailyHistory||[];
+  return `<div class="stack daily"><div class="top"><h1 class="title">Ежедневная учёба</h1><button class="btn ghost" onclick="go('prog')">Основной курс</button></div><p class="p">${DAILY.lessons.filter(l=>(dailyBest(l.n)??0)>=.7).length} из ${DAILY.lessons.length} занятий пройдено. Вся программа из ${DAILY.planned} занятий доступна сразу. Выбирай следующий урок или нужную тему.</p>${next?`<button class="btn block" onclick="openDaily(${next.n})">Продолжить · занятие ${next.n}</button>`:''}<section><h2 class="daily-heading">Занятия</h2>${DAILY.lessons.map(l=>{const b=dailyBest(l.n);return `<button class="lrow" onclick="openDaily(${l.n})"><span class="lnum num">${b>=.7?'✓':l.n}</span><span class="grow"><span class="lt">${esc(l.title)}</span><br><span class="ls">${b===null?'Доступно':Math.round(b*100)+'%'+(b<.7?' · повторить':'')}${l.n<7?' · восстановлено по FINLAB':''}${S.dailyDrafts?.['lesson-'+l.n]?' · есть сохранение':''}</span></span></button>`}).join('')}</section><section><h2 class="daily-heading">Экзамены</h2><p class="ls">Недельный — по воскресеньям, месячный — в последний день месяца. Охват накопительный, по фактическому прохождению к дате экзамена.</p>${dailyExamRow('week')}${dailyExamRow('month')}</section><section><h2 class="daily-heading">История и разбор</h2>${history.length?history.map((a,i)=>`<button class="lrow" onclick="openDailyReview(${i})"><span class="grow">${esc(a.title)}<br><span class="ls">${esc(a.at)} · ${Math.round(a.result.pct*100)}% · ${a.answers.length} заданий</span></span></button>`).reverse().join(''):'<p class="p">Пройди первый тест — здесь появятся ответы, оценки и темы для повторения.</p>'}</section><section><h2 class="daily-heading">Резервная копия</h2><p class="ls">Прогресс хранится в этом браузере. Экспортируй копию для переноса между телефоном, Telegram и компьютером. Удаление данных браузера удалит локальный прогресс.</p><div class="pair"><button class="btn ghost" onclick="exportProgress()">Скачать прогресс</button><label class="btn ghost" for="progress-file">Восстановить</label><input hidden id="progress-file" type="file" accept="application/json,.json" onchange="importProgress(this.files[0])"></div></section></div>`;
+}
+function openDailyReview(i){const a=S.dailyHistory[i];WS={};REG={};P={n:null,hdr:'Разбор',daily:null,review:true,D:{steps:a.answers.map((x,k)=>({t:'dailyreview',x,k}))},i:0,shown:false};drawPlayer()}
+STEPS.dailyreview=st=>{const x=st.x,key='review'+st.k;WS[key]=JSON.parse(JSON.stringify(x.state));const w=wdraw(x.question,key);return {html:`<h1 class="h">${T(x.question.q)}</h1><p class="ls">Оценка: ${f1(x.score,2)} из 1</p>${w.html}`}};
+function exportProgress(){const blob=new Blob([JSON.stringify({format:'finlab-progress',version:1,state:S},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='finlab-progress-'+todayMsk()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+async function importProgress(file){
+  if(!file)return;try{if(file.size>10*1024*1024)throw Error();const d=JSON.parse(await file.text());
+    if(d.format!=='finlab-progress'||d.version!==1||!validProgress(d.state))throw Error();
+    // Only published questions may enter the review renderer. Never import executable lesson HTML.
+    for(const a of d.state.dailyHistory||[]){for(const x of a.answers){
+      const n=x.question.from||a.id;if(!Number.isInteger(n)||n<1||n>DAILY.lessons.length)throw Error();
+      const lesson=await dailyLesson(n);const canonical=lesson.quiz.find(q=>q.q===x.question.q&&q.k===x.question.k);if(!canonical)throw Error();
+      const clean={...canonical};if(x.question.from)clean.from=n;x.question=clean;
+      const st=x.state;if('a' in st&&!Array.isArray(st.a)&&!(Number.isFinite(st.a)&&(!['choice','case'].includes(clean.k)||(Number.isInteger(st.a)&&st.a>=0&&st.a<clean.opts.length))))throw Error();
+    }}
+    const current=JSON.parse(JSON.stringify(S));store.set('fl_before_import',current);
+    const ids=new Set(S.events.map(r=>JSON.stringify(r)));for(const r of d.state.events)if(!ids.has(JSON.stringify(r))){S.events.push(r);ids.add(JSON.stringify(r))}
+    const history=S.dailyHistory||[],hids=new Set(history.map(r=>JSON.stringify(r)));for(const r of d.state.dailyHistory||[])if(!hids.has(JSON.stringify(r))){history.push(r);hids.add(JSON.stringify(r))}
+    S.dailyHistory=history;S.cards={...d.state.cards,...S.cards};S.events.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));save();flush();render();toast('Прогресс объединён с текущим');
+  }catch(e){toast('Не удалось прочитать копию FINLAB. Текущий прогресс сохранён.')}
+}
+function validProgress(s){return s&&Array.isArray(s.events)&&s.events.every(r=>Array.isArray(r)&&r.length>=7&&typeof r[0]==='string'&&typeof r[1]==='string'&&typeof r[3]==='string'&&Number.isFinite(r[4])&&Number.isFinite(r[5])&&r[5]>0)&&s.cards&&typeof s.cards==='object'&&(!s.dailyHistory||Array.isArray(s.dailyHistory)&&s.dailyHistory.every(a=>a&&typeof a.title==='string'&&a.result&&Number.isFinite(a.result.pct)&&Array.isArray(a.answers)&&a.answers.every(x=>x.question&&WD[x.question.k]&&x.state&&Number.isFinite(x.score))))}
+function initTelegram(){const tg=window.Telegram?.WebApp;if(!tg)return;try{tg.ready();tg.expand();tg.BackButton?.onClick(()=>P?closeLesson():go('today'));tg.onEvent?.('viewportChanged',()=>{document.documentElement.style.setProperty('--tg-height',tg.viewportStableHeight+'px')})}catch(e){}}
+
 /* ===== BOOT ===== */
-(async()=>{render();loadGl();loadAr();await loadIndex();render();if(CFG.url){setSync("","Подключаю таблицу…");pull()}})();
+(async()=>{render();initTelegram();loadDaily();loadGl();loadAr();await loadIndex();render();if(CFG.url){setSync("","Подключаю таблицу…");pull()}})();
 </script></body></html>

@@ -5,6 +5,8 @@ R=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 cat=open(f'{R}/src/catalog.json').read()
 css=open(f'{R}/src/style.css').read()
 js=open(f'{R}/src/app.js').read().replace('__CATALOG__',cat).replace('/*__WIDGETS__*/',open(f'{R}/src/widgets.js').read()).replace('/*__PLAYER__*/',open(f'{R}/src/player.js').read()).replace('/*__ARSENAL__*/',open(f'{R}/src/arsenal.js').read())
+cases=json.load(open(f'{R}/miniapp/daily/cases.json'))
+js=js.replace('/*__DAILY__*/',open(f'{R}/src/daily.js').read().replace('__CASES__',json.dumps(cases,ensure_ascii=False)))
 html=f'''<!doctype html>
 <html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -15,6 +17,8 @@ html=f'''<!doctype html>
 <title>FinLab Academy</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&display=swap">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <style>{css}</style></head><body>
 <div class="shell"><nav class="rail" id="rail" aria-label="Разделы"></nav><main class="main" id="view"></main></div>
 <nav class="tabbar" id="tabbar" aria-label="Разделы"></nav><div id="layer"></div>
@@ -59,6 +63,11 @@ for f in sorted(glob.glob(f'{R}/miniapp/lessons/[0-9]*.json'),key=lambda x:int(o
             txt=re.sub('<[^>]+>',' ',body);i+=1
             w=[k for k,rx in WHO.items() if re.search(rx,title+' '+txt,re.I)]
             st.append({"id":f"{n}-{i}","n":n,"g":BL.get(n,'0'),"k":kind,"t":title,"h":body,"x":txt,"w":w})
+for c in cases:
+    body=''.join(f'<p><b>{label}</b> {_h.escape(c[k])}</p>' for label,k in [('Факт.','fact'),('Механизм.','mechanism'),('Ограничение аналогии.','limit'),('Вопрос клиенту.','client')])
+    body+=f'<p><a target="_blank" rel="noopener" href="{_h.escape(c["url"])}">{_h.escape(c["source"])}</a></p>'
+    body+=f'<button class="btn ghost" onclick="openCase(\'{c["id"]}\')">Проверить вывод</button>'
+    st.append(dict(id=c['id'],n=c['n'],g='0',k='История с разбором',t=c['title'],h=body,x=' '.join(c[k] for k in ('fact','mechanism','limit','client')),w=[],region=c['region'],open=True))
 json.dump(st,open(f'{R}/miniapp/stories.json','w'),ensure_ascii=False)
 json.dump({"rules":_r.RULES,"hacks":hk},open(f'{R}/miniapp/rules.json','w'),ensure_ascii=False)
 cl=[]

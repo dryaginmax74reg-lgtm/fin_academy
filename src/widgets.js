@@ -1,12 +1,12 @@
 /* ===== WIDGETS: общий движок заданий (для шагов-игр, тестов урока и тестов недели) ===== */
 let WS={},REG={};
 const wk=k=>WS[k]||(WS[k]={});
-const T=s=>String(s??"").replace(/&(?!amp;|lt;|gt;|#|nbsp;)/g,"&amp;").replace(/<(?!\/?(b|i|em|sup|sub|br)\b)/g,"&lt;");
+const T=s=>String(s??"").replace(/&(?!amp;|lt;|gt;|#|nbsp;)/g,"&amp;").replace(/<[^>]*>/g,t=>/^<\/?(?:b|i|em|sup|sub|br)\s*\/?\s*>$/i.test(t)?t:esc(t)).replace(/<(?!\/?(?:b|i|em|sup|sub|br)\b)/g,"&lt;");
 function rng(seed){let h=1779033703^seed.length;for(let i=0;i<seed.length;i++){h=Math.imul(h^seed.charCodeAt(i),3432918353);h=h<<13|h>>>19}let a=h>>>0;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 const shuf=(arr,r)=>{const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 const fbk=(tone,title,text)=>`<div class="callout ${tone} pop"><div class="eyebrow">${title}</div><p class="p">${T(text)}</p></div>`;
 const toneOf=s=>s>=.99?"ok":s>0?"warm":"bad";
-function wact(key,act,v){const it=REG[key];if(!it)return;WA[it.k](it,wk(key),act,v,key);redrawKeep()}
+function wact(key,act,v){const it=REG[key];if(!it||P?.review||wdraw(it,key).done)return;WA[it.k](it,wk(key),act,v,key);redrawKeep()}
 function wdraw(it,key){REG[key]=it;return WD[it.k](it,wk(key),key)}
 function wscore(it,key){return wdraw(it,key).score||0}
 const WD={
@@ -45,7 +45,7 @@ const WD={
 const WA={
  choice:(it,st,a,v)=>{if(st.a===undefined)st.a=v},
  case:(it,st,a,v)=>{if(st.a===undefined)st.a=v},
- num:(it,st,a,v,key)=>{const x=parseFloat(String(document.getElementById("ni_"+key).value).replace(",","."));if(isNaN(x)){toast("Введи число");return}st.a=x},
+ num:(it,st,a,v,key)=>{const x=parseFloat(String(document.getElementById("ni_"+key).value).replace(",","."));if(!Number.isFinite(x)){toast("Введи конечное число");return}st.a=x},
  tf:(it,st,a,v)=>{const[i,b]=v;st.a=st.a||[];if(st.a[i]===undefined)st.a[i]=b},
  pick:(it,st,a,v)=>{if(a==="tog"){st.sel=st.sel||[];const k=st.sel.indexOf(v);k>=0?st.sel.splice(k,1):st.sel.push(v)}else st.chk=true},
  match:(it,st,a,v)=>{if(a==="l"){st.sel=v;st.flash=undefined}else if(st.sel!==null&&st.sel!==undefined){if(v===st.sel){st.lock.push(v);st.sel=null;st.flash=undefined}else{st.err++;st.flash=v}}else toast("Сначала выбери карточку слева")},

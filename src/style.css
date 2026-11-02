@@ -54,7 +54,7 @@ h1,h2,h3,p{margin:0}
 }
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
 .eyebrow{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--fg3)}
-.title{font-family:var(--display);font-weight:800;font-size:clamp(28px,7vw,38px);letter-spacing:-.03em;line-height:1.05;text-wrap:balance}
+.title{font-family:var(--display);font-weight:800;font-size:clamp(24px,6vw,32px);letter-spacing:-.03em;line-height:1.15;text-wrap:balance}
 .chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border-radius:16px;background:var(--surface);border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--fg2)}
 .chip i{width:8px;height:8px;border-radius:50%;background:var(--fg3);display:inline-block}
 .chip.ok i{background:var(--ok)} .chip.warn i{background:var(--warm)} .chip.bad i{background:var(--bad)}
@@ -191,3 +191,25 @@ table.tbl{border-collapse:collapse;width:100%;font-size:15px;min-width:300px}
 .pfoot .btn{white-space:nowrap}.pfoot .btn.block{white-space:normal}
 button.card.row{width:100%}
 .opt.bad{border-color:var(--bad,#d93a3a);background:var(--bad-soft,#fde8e8)}
+
+/* Reading and application screens keep FINLAB's existing brand. */
+:root{--fg3:#626980;--shadow:none}
+@media(prefers-color-scheme:dark){:root{--fg3:#a9afc6;--shadow:none}}
+.eyebrow,.week h3{letter-spacing:0;text-transform:none;font-size:13px}
+.hero{box-shadow:none}
+.hero .eyebrow{opacity:1}
+.hero h2{font-size:clamp(18px,4.6vw,26px)}
+.tabbar{background:var(--surface);backdrop-filter:none;-webkit-backdrop-filter:none;padding-inline:16px}
+.daily .top{align-items:flex-start;flex-wrap:wrap;gap:16px}
+.daily .title{font-size:26px}
+.daily section{display:grid;gap:12px}
+.daily-heading{font:700 20px/1.35 var(--ui);margin:14px 0 8px}
+.daily-item{padding-left:12px}
+.daily-table{max-width:100%;overflow-x:auto}
+.daily-table table{border-collapse:collapse;width:100%;font-size:16px}
+.daily-table td{padding:10px;text-align:left;border-bottom:1px solid var(--line)}
+.player .formula{max-width:100%;overflow-x:auto}
+.player .read .p{overflow-wrap:anywhere}
+.player .h{overflow-wrap:anywhere}
+@media(max-width:480px){.daily .title{font-size:23px}.daily .top .btn{padding:10px 14px}.daily-heading{font-size:18px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

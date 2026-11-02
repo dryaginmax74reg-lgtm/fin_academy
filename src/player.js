@@ -4,18 +4,21 @@ async function openLesson(n){
   try{const D=await loadLesson(n);WS={};REG={};P={n,D,i:0,t0:Date.now(),pick:{},q:{i:0,done:false,res:null}};drawPlayer()}
   catch(e){toast("Не удалось загрузить урок. Проверь интернет.")}
 }
-function closeLesson(){P=null;WS={};REG={};$("#layer").innerHTML="";document.body.style.overflow="";render()}
+function closeLesson(){saveDailyDraft();P=null;WS={};REG={};$("#layer").innerHTML="";document.body.style.overflow="";window.Telegram?.WebApp?.BackButton?.hide();render()}
 function redrawKeep(){keepNext=true;drawPlayer()}
 function drawPlayer(){
   const D=P.D,st=D.steps[P.i],body=STEPS[st.t](st),last=P.i===D.steps.length-1;
   const pb0=$("#pbody"),sc=pb0?pb0.scrollTop:0;
-  const hdr=P.n?`Урок ${P.n} · ${BLOCKS[CATALOG[P.n-1][1]]}`:P.hdr;
+  const hdr=P.daily?(P.n?`Ежедневная учёба · занятие ${P.n}`:P.hdr):P.n?`Урок ${P.n} · ${BLOCKS[CATALOG[P.n-1][1]]}`:P.hdr;
   $("#layer").innerHTML=`<div class="player ${P.shown?"":"enter"}" role="dialog" aria-label="${esc(hdr)}">
    <div class="phead"><div class="row"><button class="x" onclick="closeLesson()" aria-label="Закрыть">✕</button><div class="grow"><div class="eyebrow">${esc(hdr)}</div></div><span class="ls num">${P.i+1}/${D.steps.length}</span></div>
    <div class="seg">${D.steps.map((_,k)=>`<i class="${k<=P.i?"on":""}"></i>`).join("")}</div></div>
    <div class="pbody" id="pbody"><div class="pin">${body.html}</div></div>
    <div class="pfoot"><div class="in">${P.i>0&&!body.noback?`<button class="btn ghost" onclick="stepTo(-1)" aria-label="Назад">←</button>`:""}${body.foot||`<button class="btn block" onclick="${last?"closeLesson()":"stepTo(1)"}">${last?"Готово":"Дальше"}</button>`}</div></div></div>`;
   P.shown=true;document.body.style.overflow="hidden";const pb=$("#pbody");if(pb)pb.scrollTop=keepNext?sc:0;keepNext=false;
+  if(P.daily&&!P.q.done)saveDailyDraft();
+  window.Telegram?.WebApp?.BackButton?.show();
+  window.MathJax?.typesetPromise?.([$("#layer")]).catch(()=>{});
 }
 function stepTo(d){P.i=Math.max(0,Math.min(P.D.steps.length-1,P.i+d));drawPlayer()}
 function readIdx(st){const rs=P.D.steps.filter(s=>s.t==="read");return [rs.indexOf(st)+1,rs.length]}
@@ -48,7 +51,7 @@ const STEPS={
  play(st){
   const g=wk("p"+P.i);g.i=g.i||0;const items=st.items,n=items.length,it=items[g.i],key=`p${P.i}.${g.i}`,w=wdraw(it,key),lastItem=g.i===n-1;
   let foot=w.foot;
-  if(!foot)foot=w.done?(lastItem?`<button class="btn block" onclick="stepTo(1)">Дальше</button>`:`<button class="btn block" onclick="playNext()">Следующее задание</button>`):`<button class="btn block" disabled>Выполни задание</button>`;
+  if(!foot)foot=w.done?(lastItem?`<button class="btn block" onclick="${P.i===P.D.steps.length-1?'closeLesson()':'stepTo(1)'}">${P.i===P.D.steps.length-1?'Готово':'Дальше'}</button>`:`<button class="btn block" onclick="playNext()">Следующее задание</button>`):`<button class="btn block" disabled>Выполни задание</button>`;
   return {html:`<div class="kicker">${esc(st.kicker||"Задание")}${n>1?` · ${g.i+1} из ${n}`:""}</div><h1 class="h">${esc(st.title)}</h1>${st.intro&&g.i===0?`<div class="p">${st.intro}</div>`:""}${it.q?`<div class="qq">${T(it.q)}</div>`:""}${w.html}${w.done&&lastItem&&st.outro?`<div class="callout ok pop"><div class="eyebrow">Что из этого следует</div><div class="p">${st.outro}</div></div>`:""}`,foot};
  },
  story(st){
@@ -81,7 +84,7 @@ const STEPS={
    ${r?`<div class="card row"><div class="big num">${Math.round(r.pct*100)}%</div><div class="grow"><b>${f1(r.score,2)} из ${r.max}</b><div class="ls">Порог перехода — 70%</div></div></div>`:`<div class="callout warm">Пройди тест, чтобы результат записался.</div>`}
    <div class="callout"><div class="eyebrow">Что ты теперь умеешь</div><p class="p">${esc(st.can)}</p></div>
    <div class="eyebrow">Углубиться</div><div class="links">${(st.links||[]).map(l=>l.url?`<a href="${esc(l.url)}" target="_blank" rel="noopener"><b>${esc(l.title)}</b><span>${esc(l.sub||"")}</span></a>`:`<div class="mini" style="margin-bottom:8px"><span>${esc(l.kind||"Книга")}</span><b style="font-family:var(--ui);font-size:16px">${esc(l.title)}</b></div>`).join("")}</div>
-   <button class="callout" style="text-align:left;width:100%" onclick="closeLesson();gl.f=${P.n};gl.mode='list';go('gl')"><div class="eyebrow">Словарь профи</div><p class="p"><b>Термины урока</b> — как они звучат у профессионалов и как объяснить их клиенту. Открыть →</p></button>
+   <button class="callout" style="text-align:left;width:100%" onclick="gl.f=${P.n};gl.mode='list';closeLesson();go('gl')"><div class="eyebrow">Словарь профи</div><p class="p"><b>Термины урока</b> — как они звучат у профессионалов и как объяснить их клиенту. Открыть →</p></button>
    <div class="callout ok"><div class="eyebrow">Карточки</div><p class="p">${(INDEX.cards[P.n]||[]).length} карточек придут во вкладку «Повтор» завтра.</p></div>`};
  },
  twrap(){const r=P.q.res,miss=r?r.miss:[];
@@ -92,8 +95,11 @@ const STEPS={
 };
 function nextQ(){
   const Q=P.D.quiz;
+  if(P.q.done)return;
+  if(!wdraw(Q[P.q.i],'q'+P.q.i).done){toast('Сначала ответь на вопрос');return}
   if(P.q.i<Q.length-1){P.q.i++;drawPlayer();return}
   const per=Q.map((it,i)=>wscore(it,"q"+i));let score=Math.round(per.reduce((a,b)=>a+b,0)*100)/100;
+  if(P.daily){dailyFinish(per);return}
   const sec=Math.round((Date.now()-P.t0)/1000);
   const miss=P.test?[...new Set(Q.filter((it,i)=>per[i]<.7).map(it=>it.from))].sort((a,b)=>a-b):[];
   P.q.res={score,max:Q.length,pct:score/Q.length,miss};P.q.done=true;

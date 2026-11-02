@@ -6,7 +6,7 @@ async function loadAr(){
   }
   if(tab==="ar")render();
 }
-const ar={v:"home",sf:0,sw:"",sq:"",so:null,rq:"",rg:"",ro:null,rv:{},co:null,cw:{},cres:null};
+const ar={v:"home",sf:0,sw:"",sq:"",region:"",so:null,rq:"",rg:"",ro:null,rv:{},co:null,cw:{},cres:null};
 const arBack=`<button class="btn ghost" style="min-height:36px" onclick="ar.v='home';render();window.scrollTo(0,0)">← Арсенал</button>`;
 const chip=(on,label,fn)=>`<button class="btn ${on?"":"ghost"}" style="min-height:36px;padding:0 12px" onclick="${fn}">${label}</button>`;
 const inpCss="width:100%;min-height:48px;border-radius:14px;border:2px solid var(--line);padding:0 14px;background:var(--surface);color:var(--fg);font:inherit";
@@ -15,7 +15,7 @@ function vAr(){
   if(ar.v==="calc")return vCalc();
   if(ar.v==="sc")return vSc();
   const ok=Object.values(S.scen||{}).filter(x=>x.done).length;
-  const items=ST.filter(s=>taken(s.n)).length;
+  const items=ST.filter(s=>s.open||taken(s.n)).length;
   return `<div class="stack"><div class="top"><h1 class="title">Арсенал</h1></div>
   <p class="p ls">То, что пригодится на встрече: истории, правила «в уме» и тренировка на разных клиентах.</p>
   <button class="card row" style="text-align:left" onclick="ar.v='st';render();window.scrollTo(0,0)"><div class="grow"><b>Библиотека историй</b><div class="ls">Кейсы и факты «для пощеголять». Открыто ${items} из ${ST.length}: истории урока открываются после его теста.</div></div><span>›</span></button>
@@ -24,16 +24,18 @@ function vAr(){
 }
 /* --- истории --- */
 const WHO={cons:"Консервативному",biz:"Предпринимателю",risk:"Азартному"};
-function stFilter(){const q=ar.sq.trim().toLowerCase();return ST.filter(s=>taken(s.n)&&(!ar.sf||s.g===ar.sf)&&(!ar.sw||(s.w||[]).includes(ar.sw))&&(!q||(s.t+" "+s.x).toLowerCase().includes(q)))}
+function stFilter(){const q=ar.sq.trim().toLowerCase();return ST.filter(s=>(s.open||taken(s.n))&&(!ar.region||s.region===ar.region)&&(!ar.sf||s.g===ar.sf)&&(!ar.sw||(s.w||[]).includes(ar.sw))&&(!q||(s.t+" "+s.x).toLowerCase().includes(q)))}
 function stList(l){if(!l.length)return `<div class="card empty"><p>${ST.some(s=>taken(s.n))?"Ничего не найдено.":"Пройди тест первого урока: его истории появятся здесь."}</p></div>`;
-  return l.map(s=>ar.so===s.id?`<div class="card stack pop" style="gap:10px"><div class="eyebrow">${esc(s.k)} · урок ${s.n} · ${esc(BLOCKS[s.g]||"")}</div><h2 class="disp" style="margin:0">${esc(s.t)}</h2><div class="rd">${s.h}</div>
-   <div class="ls">${(s.w||[]).map(w=>"Подойдёт: "+WHO[w]).join(" · ")}</div><div class="row" style="gap:8px"><button class="btn ghost" onclick="ar.so=null;render()">Свернуть</button>${(INDEX.available||[]).includes(s.n)?`<button class="btn ghost" onclick="openLesson(${s.n})">Урок ${s.n}</button>`:""}</div></div>`
-   :`<button class="card row" style="text-align:left" onclick="ar.so='${s.id}';render()"><div class="grow"><b>${esc(s.t)}</b><div class="ls">${esc(s.k)} · урок ${s.n}</div></div><span>›</span></button>`).join("")}
+  return l.map(s=>ar.so===s.id?`<div class="card stack pop" style="gap:10px"><div class="eyebrow">${esc(s.k)} · ${s.open?"ежедневное занятие":"урок"} ${s.n} · ${esc(BLOCKS[s.g]||"")}</div><h2 class="disp" style="margin:0">${esc(s.t)}</h2><div class="rd">${s.h}</div>
+   <div class="ls">${(s.w||[]).map(w=>"Подойдёт: "+WHO[w]).join(" · ")}</div><div class="row" style="gap:8px"><button class="btn ghost" onclick="ar.so=null;render()">Свернуть</button>${(INDEX.available||[]).includes(s.n)?`<button class="btn ghost" onclick="${s.open?"openDaily":"openLesson"}(${s.n})">${s.open?"Занятие":"Урок"} ${s.n}</button>`:""}</div></div>`
+   :`<button class="card row" style="text-align:left" onclick="ar.so='${s.id}';render()"><div class="grow"><b>${esc(s.t)}</b><div class="ls">${esc(s.k)} · ${s.open?"ежедневное занятие":"урок"} ${s.n}</div></div><span>›</span></button>`).join("")}
 function stKeep(){const el=$("#stlist");if(el)el.innerHTML=stList(stFilter())}
 function vSt(){
-  const open=ST.filter(s=>taken(s.n)),bl=[...new Set(open.map(s=>s.g))];
+  const open=ST.filter(s=>s.open||taken(s.n)),bl=[...new Set(open.map(s=>s.g))];
   return `<div class="stack"><div class="top"><h1 class="title">Истории</h1>${arBack}</div>
   <div class="ls">Открыто ${open.length} из ${ST.length}. Выбери историю, прочитай и перескажи клиенту своими словами.</div>
+  <p class="ls">Подборки РФ и США показывают новые истории с проверенными источниками. Остальные истории доступны во вкладке «Все страны».</p>
+  <div class="row" style="flex-wrap:wrap;gap:6px">${['','РФ','США'].map(r=>chip(ar.region===r,r||'Все страны',`ar.region='${r}';render()`)).join('')}</div>
   <input placeholder="Найти историю…" value="${esc(ar.sq)}" oninput="ar.sq=this.value;stKeep()" style="${inpCss}">
   <div class="row" style="flex-wrap:wrap;gap:6px">${chip(!ar.sf,"Все темы","ar.sf=0;render()")}${bl.map(b=>chip(ar.sf===b,BLOCKS[b],`ar.sf='${b}';render()`)).join("")}</div>
   <div class="row" style="flex-wrap:wrap;gap:6px">${chip(!ar.sw,"Любому клиенту","ar.sw='';render()")}${Object.entries(WHO).map(([k,l])=>chip(ar.sw===k,l,`ar.sw='${k}';render()`)).join("")}</div>

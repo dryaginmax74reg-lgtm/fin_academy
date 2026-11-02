@@ -13,7 +13,8 @@ const nowMsk=()=>new Date().toLocaleString("sv-SE",{timeZone:"Europe/Moscow"});
 const todayMsk=()=>nowMsk().slice(0,10);
 function lessonDate(n){let d=new Date(START+"T12:00:00Z"),c=1;while(c<n){d.setUTCDate(d.getUTCDate()+1);const w=d.getUTCDay();if(w!==0&&w!==6)c++}return d.toISOString().slice(0,10)}
 const fmtD=iso=>new Date(iso+"T12:00:00Z").toLocaleDateString("ru-RU",{day:"numeric",month:"long",weekday:"long",timeZone:"UTC"});
-const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let storageWarning=false;
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){if(!storageWarning){storageWarning=true;toast('Не удалось сохранить данные на устройстве. Скачай резервную копию прогресса.')}return false}}};
 const key=r=>r.slice(0,4).join("|");
 function addDays(iso,k){const d=new Date(iso+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+k);return d.toISOString().slice(0,10)}
 function toast(m){const t=document.createElement("div");t.className="toast pop";t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2600)}
@@ -79,13 +80,13 @@ function avgScore(){const b=CATALOG.map(l=>best(l[0])).filter(x=>x!==null);retur
 
 /* ===== SHELL ===== */
 const ICONS={today:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',prog:'<path d="M4 6h16M4 12h16M4 18h10"/>',ar:'<path d="M12 3l2.5 5.5L20 9.3l-4 4 1 5.7-5-2.8L7 19l1-5.7-4-4 5.5-.8z"/>',gl:'<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h11"/>',rep:'<path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/>',stat:'<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>'};
-let tab=(location.hash||"#today").slice(1);if(!["today","prog","gl","ar","rep","stat"].includes(tab))tab="today";
+let tab=(location.hash||"#today").slice(1);if(!["today","prog","daily","gl","ar","rep","stat"].includes(tab))tab="today";
 const TABS=[["today","Сегодня"],["prog","Программа"],["gl","Словарь"],["ar","Арсенал"],["rep","Повтор"],["stat","Прогресс"]];
 function nav(){const due=dueCards().length;
   const h=TABS.map(([k,l])=>`<button class="tab" role="tab" aria-selected="${tab===k}" onclick="go('${k}')"><svg viewBox="0 0 24 24">${ICONS[k]}</svg><span>${l}</span>${k==="rep"&&due?`<em class="dot" style="font-style:normal">${due}</em>`:""}</button>`).join("");
   $("#tabbar").innerHTML=h;$("#rail").innerHTML=`<div class="brand">Fin<b>Lab</b> Academy</div>`+h}
 function go(k){tab=k;try{history.replaceState(null,"","#"+k)}catch(e){}render();window.scrollTo(0,0)}
-function render(){nav();$("#view").innerHTML=({today:vToday,prog:vProg,gl:vGl,ar:vAr,rep:vRep,stat:vStat})[tab]()}
+function render(){nav();$("#view").innerHTML=({today:vToday,prog:vProg,daily:vDaily,gl:vGl,ar:vAr,rep:vRep,stat:vStat})[tab]()}
 
 /* ===== VIEWS ===== */
 function vToday(){
@@ -95,6 +96,7 @@ function vToday(){
   return `<div class="stack">
   <div class="top"><div class="eyebrow">FinLab Academy</div>${syncChip()}</div>
   <h1 class="title">${pre?"Завтра начинаем.":s>1?`Серия ${s} дн.`:"Сегодняшний урок"}</h1>
+  <button class="card row" onclick="go('daily')" style="text-align:left"><span class="grow"><b>Ежедневная учёба</b><br><span class="ls">Занятия из чата, недельные и месячные экзамены</span></span><span aria-hidden="true">→</span></button>
   <div class="hero"><div class="eyebrow">№ ${n} · ${BLOCKS[L[1]]} · ${label}</div><h2>${esc(L[2])}</h2><p>${esc(L[3])}.</p>
   ${ready?`<button class="btn inv" onclick="openLesson(${n})">${taken(n)?"Пройти ещё раз":"Начать урок"} →</button>`:`<button class="btn inv" disabled>Урок готовится</button>`}</div>
   ${due?`<button class="card row" onclick="go('rep')" style="text-align:left"><div class="grow"><b>Повторение</b><div class="ls">${due} карточ${due===1?"ка":due<5?"ки":"ек"} ждут. 2 минуты.</div></div><span class="btn ghost" style="min-height:40px;padding:0 16px">Начать</span></button>`:""}
@@ -103,7 +105,7 @@ function vToday(){
   <div class="card"><div class="eyebrow">История-крючок</div><p style="margin-top:6px;font-weight:600">${esc(L[4])}</p></div></div>`;
 }
 function vProg(){
-  const nx=nextLesson();let h=`<div class="stack"><div class="top"><h1 class="title">Программа</h1>${syncChip()}</div>`;
+  const nx=nextLesson();let h=`<div class="stack"><div class="top"><h1 class="title">Программа</h1>${syncChip()}</div><button class="lrow" onclick="go('daily')"><span class="grow"><b>Ежедневная учёба</b><br><span class="ls">Отдельный порядок занятий из чата · внутри FINLAB</span></span><span aria-hidden="true">→</span></button>`;
   for(let w=0;w<12;w++){
     h+=`<section class="week"><h3>Неделя ${w+1} · ${WEEKS[w]}</h3>`;
     for(let i=1;i<=5;i++){
@@ -200,5 +202,6 @@ function vStat(){
 /*__WIDGETS__*/
 /*__PLAYER__*/
 /*__ARSENAL__*/
+/*__DAILY__*/
 /* ===== BOOT ===== */
-(async()=>{render();loadGl();loadAr();await loadIndex();render();if(CFG.url){setSync("","Подключаю таблицу…");pull()}})();
+(async()=>{render();initTelegram();loadDaily();loadGl();loadAr();await loadIndex();render();if(CFG.url){setSync("","Подключаю таблицу…");pull()}})();
