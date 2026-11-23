@@ -211,18 +211,14 @@
   ],
   "links": [
     {
-      "title": "Инфляция",
-      "sub": "Статья · Википедия",
-      "url": "https://ru.wikipedia.org/w/index.php?search=%D0%98%D0%BD%D1%84%D0%BB%D1%8F%D1%86%D0%B8%D1%8F"
+      "title": "Что такое инфляция",
+      "sub": "Банк России · как считают индекс цен и почему личная инфляция может отличаться",
+      "url": "https://www.cbr.ru/dkp/about_inflation/"
     },
     {
-      "title": "Пол Волкер и победа над инфляцией",
-      "sub": "Видео · YouTube, поиск по запросу",
-      "url": "https://www.youtube.com/results?search_query=%D0%9F%D0%BE%D0%BB%20%D0%92%D0%BE%D0%BB%D0%BA%D0%B5%D1%80%20%D0%B8%D0%BD%D1%84%D0%BB%D1%8F%D1%86%D0%B8%D1%8F%201980%20%D0%A4%D0%A0%D0%A1"
-    },
-    {
-      "kind": "Книга",
-      "title": "Paul Volcker, Christine Harper. Keeping At It: The Quest for Sound Money and Good Government"
+      "title": "Как США вышли из Великой инфляции",
+      "sub": "Federal Reserve History · что менял Пол Волкер и какой ценой замедлился рост цен",
+      "url": "https://www.federalreservehistory.org/essays/great-inflation"
     }
   ]
 }
